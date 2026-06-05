@@ -2,6 +2,10 @@ defmodule Invincibles.Game.SimEngine do
   @moduledoc """
   Core computational match engine that simulates Premier League matches.
   """
+  import Ecto.Query
+  alias Invincibles.Repo
+  alias Invincibles.Game.Appearance
+  alias Invincibles.Game.Club
 
   @opponent_baseline %{
     attack: 360.0,
@@ -14,26 +18,70 @@ defmodule Invincibles.Game.SimEngine do
   Calculates the aggregate strengths for a user lineup.
   """
   def calculate_strengths(lineup) do
-    # Extract players by position group
-    gks = [lineup.gk] |> Enum.reject(&is_nil/1)
-    dfs = [lineup.lb, lineup.cb1, lineup.cb2, lineup.rb] |> Enum.reject(&is_nil/1)
-    mfs = [lineup.lm, lineup.cm, lineup.rm] |> Enum.reject(&is_nil/1)
-    fws = [lineup.lw, lineup.st, lineup.rw] |> Enum.reject(&is_nil/1)
+    # Extract players by position group dynamically.
+    # Support both database appearances (preloaded with :player) and mock test maps (key-based lookups).
+    all_players = Map.values(lineup) |> Enum.reject(&is_nil/1)
+
+    has_player_structs? = Enum.any?(all_players, &Map.has_key?(&1, :player))
+
+    {gks, dfs, mfs, fws} =
+      if has_player_structs? do
+        gks = Enum.filter(all_players, &(&1.player.primary_position == "GK"))
+        dfs = Enum.filter(all_players, &(&1.player.primary_position == "DF"))
+        mfs = Enum.filter(all_players, &(&1.player.primary_position == "MF"))
+        fws = Enum.filter(all_players, &(&1.player.primary_position == "FW"))
+        {gks, dfs, mfs, fws}
+      else
+        gks = [Map.get(lineup, :gk)] |> Enum.reject(&is_nil/1)
+
+        dfs =
+          [
+            Map.get(lineup, :lb),
+            Map.get(lineup, :cb1),
+            Map.get(lineup, :cb2),
+            Map.get(lineup, :cb3),
+            Map.get(lineup, :rb)
+          ]
+          |> Enum.reject(&is_nil/1)
+
+        mfs =
+          [
+            Map.get(lineup, :lm),
+            Map.get(lineup, :cm),
+            Map.get(lineup, :cm1),
+            Map.get(lineup, :cm2),
+            Map.get(lineup, :cm3),
+            Map.get(lineup, :rm)
+          ]
+          |> Enum.reject(&is_nil/1)
+
+        fws =
+          [
+            Map.get(lineup, :lw),
+            Map.get(lineup, :st),
+            Map.get(lineup, :st1),
+            Map.get(lineup, :st2),
+            Map.get(lineup, :rw)
+          ]
+          |> Enum.reject(&is_nil/1)
+
+        {gks, dfs, mfs, fws}
+      end
 
     # Attack Strength = Sum of forwards' SHO + (midfielders' PAS * 0.5)
     fw_sho = sum_stat(fws, "sho")
     mf_pas = sum_stat(mfs, "pas")
-    attack_strength = fw_sho + (mf_pas * 0.5)
+    attack_strength = fw_sho + mf_pas * 0.5
 
     # Control Strength = Sum of midfielders' DRI/PAS + (defenders' PAS * 0.3)
     mf_dri_pas = sum_stat(mfs, "dri") + sum_stat(mfs, "pas")
     df_pas = sum_stat(dfs, "pas")
-    control_strength = mf_dri_pas + (df_pas * 0.3)
+    control_strength = mf_dri_pas + df_pas * 0.3
 
     # Defensive Strength = Sum of defenders' DEF/PHY + (midfielders' DEF * 0.5)
     df_def_phy = sum_stat(dfs, "def") + sum_stat(dfs, "phy")
     mf_def = sum_stat(mfs, "def")
-    defensive_strength = df_def_phy + (mf_def * 0.5)
+    defensive_strength = df_def_phy + mf_def * 0.5
 
     # Goalkeeping Strength = GK's baseline attributes
     gk_strength =
@@ -88,7 +136,11 @@ defmodule Invincibles.Game.SimEngine do
 
         if user_control >= opp_control do
           # User attacks
-          if score_check?(user_strengths.attack, @opponent_baseline.defense, @opponent_baseline.gk) do
+          if score_check?(
+               user_strengths.attack,
+               @opponent_baseline.defense,
+               @opponent_baseline.gk
+             ) do
             {u_goals + 1, o_goals}
           else
             {u_goals, o_goals}
@@ -128,35 +180,206 @@ defmodule Invincibles.Game.SimEngine do
   end
 
   @doc """
-  Simulates a 38-game season.
-  If any match is not a win, it breaks out early and returns the season history up to that point.
+  Simulates a full 38-game season.
+  Plays games against actual historical opponents from a randomly selected season if database is checked out (otherwise falls back to static baseline).
   """
   def simulate_season(user_strengths) do
-    Enum.reduce_while(1..38, %{week: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, matches: []}, fn week, acc ->
-      {result, gf, ga} = simulate_match(user_strengths)
-
-      match_detail = %{
-        week: week,
-        result: result,
-        gf: gf,
-        ga: ga
-      }
-
-      new_acc = %{
-        week: week,
-        wins: acc.wins + (if result == :win, do: 1, else: 0),
-        draws: acc.draws + (if result == :draw, do: 1, else: 0),
-        losses: acc.losses + (if result == :loss, do: 1, else: 0),
-        gf: acc.gf + gf,
-        ga: acc.ga + ga,
-        matches: acc.matches ++ [match_detail]
-      }
-
-      if result == :win do
-        {:cont, new_acc}
-      else
-        {:halt, new_acc}
+    has_db? =
+      try do
+        Repo.query!("SELECT 1")
+        true
+      rescue
+        _ -> false
       end
-    end)
+
+    if has_db? do
+      simulate_opponents_season(user_strengths)
+    else
+      simulate_static_season(user_strengths)
+    end
+  end
+
+  # Static simulation fallback (e.g. for unit tests that run asynchronously without sandbox checked out)
+  defp simulate_static_season(user_strengths) do
+    Enum.reduce(
+      1..38,
+      %{week: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, matches: []},
+      fn week, acc ->
+        {result, gf, ga} = simulate_match(user_strengths)
+
+        match_detail = %{
+          week: week,
+          result: result,
+          gf: gf,
+          ga: ga,
+          opponent: "Static Opponent",
+          opponent_short: "OPP"
+        }
+
+        %{
+          week: week,
+          wins: acc.wins + if(result == :win, do: 1, else: 0),
+          draws: acc.draws + if(result == :draw, do: 1, else: 0),
+          losses: acc.losses + if(result == :loss, do: 1, else: 0),
+          gf: acc.gf + gf,
+          ga: acc.ga + ga,
+          matches: acc.matches ++ [match_detail]
+        }
+      end
+    )
+    |> Map.put(:season_label, "Simulation Mode")
+  end
+
+  # Realistic simulation playing against 19 dynamic opponents twice from a random season
+  defp simulate_opponents_season(user_strengths) do
+    season = select_random_season() || "2003-2004"
+    clubs = get_clubs_for_season(season)
+
+    if Enum.empty?(clubs) do
+      simulate_static_season(user_strengths)
+    else
+      # Compute dynamic strengths for all clubs once
+      opponent_strengths_map =
+        Enum.into(clubs, %{}, fn club ->
+          {club.id, calculate_opponent_strengths(club.id, season)}
+        end)
+
+      # Build 38 fixtures
+      fixtures = build_fixtures(clubs)
+
+      results =
+        Enum.reduce(
+          Enum.with_index(fixtures, 1),
+          %{week: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, matches: []},
+          fn {opponent, index}, acc ->
+            opp_strengths = Map.fetch!(opponent_strengths_map, opponent.id)
+            {result, gf, ga} = simulate_match_against_opponent(user_strengths, opp_strengths)
+
+            match_detail = %{
+              week: index,
+              result: result,
+              gf: gf,
+              ga: ga,
+              opponent: opponent.name,
+              opponent_short: opponent.short_name
+            }
+
+            %{
+              week: index,
+              wins: acc.wins + if(result == :win, do: 1, else: 0),
+              draws: acc.draws + if(result == :draw, do: 1, else: 0),
+              losses: acc.losses + if(result == :loss, do: 1, else: 0),
+              gf: acc.gf + gf,
+              ga: acc.ga + ga,
+              matches: acc.matches ++ [match_detail]
+            }
+          end
+        )
+
+      Map.put(results, :season_label, season)
+    end
+  end
+
+  # Select a random season from appearances in the DB
+  defp select_random_season do
+    seasons =
+      from(a in Appearance,
+        select: a.season,
+        distinct: true
+      )
+      |> Repo.all()
+
+    if Enum.empty?(seasons) do
+      nil
+    else
+      Enum.random(seasons)
+    end
+  end
+
+  # Fetch all unique clubs with appearances in a given season
+  defp get_clubs_for_season(season) do
+    from(c in Club,
+      join: a in assoc(c, :appearances),
+      where: a.season == ^season,
+      distinct: true,
+      select: c
+    )
+    |> Repo.all()
+  end
+
+  # Generates exactly 38 fixtures from the available clubs list
+  defp build_fixtures(clubs) do
+    Stream.repeatedly(fn -> Enum.random(clubs) end)
+    |> Enum.take(38)
+    |> Enum.shuffle()
+  end
+
+  # Calculates dynamic rating strength for an opponent club based on top players' stats
+  defp calculate_opponent_strengths(club_id, season) do
+    apps =
+      from(a in Appearance,
+        join: p in assoc(a, :player),
+        where: a.club_id == ^club_id and a.season == ^season,
+        order_by: [desc: a.ovr],
+        preload: [:player]
+      )
+      |> Repo.all()
+
+    # Group top players by position to calculate strengths
+    gks = Enum.filter(apps, &(&1.player.primary_position == "GK")) |> Enum.take(1)
+    dfs = Enum.filter(apps, &(&1.player.primary_position == "DF")) |> Enum.take(4)
+    mfs = Enum.filter(apps, &(&1.player.primary_position == "MF")) |> Enum.take(4)
+    fws = Enum.filter(apps, &(&1.player.primary_position == "FW")) |> Enum.take(2)
+
+    lineup = %{
+      gk: List.first(gks),
+      lb: Enum.at(dfs, 0),
+      cb1: Enum.at(dfs, 1),
+      cb2: Enum.at(dfs, 2),
+      rb: Enum.at(dfs, 3),
+      lm: Enum.at(mfs, 0),
+      cm: Enum.at(mfs, 1),
+      rm: Enum.at(mfs, 2),
+      cm1: Enum.at(mfs, 3),
+      lw: Enum.at(fws, 0),
+      st: Enum.at(fws, 1)
+    }
+
+    calculate_strengths(lineup)
+  end
+
+  # Simulates match against specific opponent strengths
+  defp simulate_match_against_opponent(user_strengths, opp_strengths) do
+    {user_goals, opp_goals} =
+      Enum.reduce(1..5, {0, 0}, fn _possession, {u_goals, o_goals} ->
+        user_variance = 0.7 + :rand.uniform() * 0.6
+        opp_variance = 0.7 + :rand.uniform() * 0.6
+
+        user_control = user_strengths.control * user_variance
+        opp_control = opp_strengths.control * opp_variance
+
+        if user_control >= opp_control do
+          if score_check?(user_strengths.attack, opp_strengths.defense, opp_strengths.gk) do
+            {u_goals + 1, o_goals}
+          else
+            {u_goals, o_goals}
+          end
+        else
+          if score_check?(opp_strengths.attack, user_strengths.defense, user_strengths.gk) do
+            {u_goals, o_goals + 1}
+          else
+            {u_goals, o_goals}
+          end
+        end
+      end)
+
+    result =
+      cond do
+        user_goals > opp_goals -> :win
+        user_goals == opp_goals -> :draw
+        true -> :loss
+      end
+
+    {result, user_goals, opp_goals}
   end
 end

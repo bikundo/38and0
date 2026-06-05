@@ -75,24 +75,41 @@ defmodule Seeds do
 
     # 3. Iterate and build dynamic clubs list from files
     IO.puts("Scanning dataset files to create clubs...")
-    seasons_dirs = 
+
+    seasons_dirs =
       File.ls!(dataset_path)
       # Filter for Season_XXXX
       |> Enum.filter(&String.starts_with?(&1, "Season_"))
       |> Enum.sort()
 
     club_names = find_all_club_names(dataset_path, seasons_dirs)
-    
-    club_map = 
+
+    club_map =
       Enum.into(club_names, %{}, fn raw_name ->
         clean_name = clean_club_name(raw_name)
-        meta = Map.get(@clubs_metadata, clean_name, %{short_name: default_short_name(clean_name), color: "#64748B", base_rating: 75})
-        
-        club = 
+
+        meta =
+          Map.get(@clubs_metadata, clean_name, %{
+            short_name: default_short_name(clean_name),
+            color: "#64748B",
+            base_rating: 75
+          })
+
+        club =
           case Repo.get_by(Club, name: clean_name) do
-            nil -> Repo.insert!(Club.changeset(%Club{}, %{name: clean_name, short_name: meta.short_name, primary_color: meta.color}))
-            existing -> existing
+            nil ->
+              Repo.insert!(
+                Club.changeset(%Club{}, %{
+                  name: clean_name,
+                  short_name: meta.short_name,
+                  primary_color: meta.color
+                })
+              )
+
+            existing ->
+              existing
           end
+
         {raw_name, %{id: club.id, name: club.name, base_rating: meta.base_rating}}
       end)
 
@@ -104,11 +121,11 @@ defmodule Seeds do
       year = String.to_integer(year_str)
       season_label = "#{year}-#{year + 1}"
       csv_season_key = "#{year}/#{year + 1}"
-      
+
       IO.puts("Seeding season #{season_label}...")
       season_path = Path.join(dataset_path, season_dir)
-      
-      json_files = 
+
+      json_files =
         File.ls!(season_path)
         |> Enum.filter(&String.ends_with?(&1, ".json"))
 
@@ -119,16 +136,16 @@ defmodule Seeds do
         # Lookup points for this club in this season to calculate dynamic club rating
         csv_club_key = map_to_csv_team_name(club_info.name)
         pts = Map.get(teams_points, {csv_season_key, csv_club_key}, 50)
-        
+
         # Calculate dynamic club base rating from points (30-100 points mapped to 72-88 rating)
         dynamic_club_rating = 70 + floor((pts - 15) * 0.25)
         dynamic_club_rating = max(min(dynamic_club_rating, 90), 72)
-        
+
         # Read file content
         file_path = Path.join(season_path, file)
         {:ok, json_text} = File.read(file_path)
         {:ok, squad_data} = Jason.decode(json_text)
-        
+
         players_data = Map.get(squad_data, "players", [])
 
         # Process each player in squad
@@ -137,16 +154,19 @@ defmodule Seeds do
           raw_pos = player_data["position"]
           pos_group = map_position_group(raw_pos)
           display_name = make_display_name(full_name)
-          
+
           # 1. Get or create Player
-          player = 
+          player =
             case Repo.get_by(Player, name: full_name) do
               nil ->
-                Repo.insert!(Player.changeset(%Player{}, %{
-                  name: full_name,
-                  display_name: display_name,
-                  primary_position: pos_group
-                }))
+                Repo.insert!(
+                  Player.changeset(%Player{}, %{
+                    name: full_name,
+                    display_name: display_name,
+                    primary_position: pos_group
+                  })
+                )
+
               existing ->
                 existing
             end
@@ -155,14 +175,14 @@ defmodule Seeds do
           ovr = calculate_player_ovr(player_data, dynamic_club_rating)
 
           # 3. Generate stats based on position and rating
-          stats = 
+          stats =
             if pos_group == "GK" do
               gen_gk_stats(ovr)
             else
               gen_outfield_stats(pos_group, ovr)
             end
 
-          era = 
+          era =
             cond do
               year < 2000 -> "90s"
               year < 2010 -> "00s"
@@ -173,24 +193,30 @@ defmodule Seeds do
           # 4. Create appearance
           case Repo.get_by(Appearance, player_id: player.id, season: season_label) do
             nil ->
-              Repo.insert!(Appearance.changeset(%Appearance{}, %{
-                player_id: player.id,
-                club_id: club_info.id,
-                season: season_label,
-                era: era,
-                ovr: ovr,
-                stats: stats
-              }))
+              Repo.insert!(
+                Appearance.changeset(%Appearance{}, %{
+                  player_id: player.id,
+                  club_id: club_info.id,
+                  season: season_label,
+                  era: era,
+                  ovr: ovr,
+                  stats: stats
+                })
+              )
+
             _exists ->
               nil
           end
         end
       end
     end
-    
+
     total_apps = Repo.aggregate(Appearance, :count)
     total_players = Repo.aggregate(Player, :count)
-    IO.puts("Successfully seeded #{total_players} real players with #{total_apps} appearances since 1992!")
+
+    IO.puts(
+      "Successfully seeded #{total_players} real players with #{total_apps} appearances since 1992!"
+    )
   end
 
   # Parse season points stats CSV
@@ -199,18 +225,25 @@ defmodule Seeds do
       {:ok, content} ->
         content
         |> String.split("\n")
-        |> Enum.drop(1) # Drop header
+        # Drop header
+        |> Enum.drop(1)
         |> Enum.reject(&(&1 == ""))
         |> Enum.reduce(%{}, fn line, acc ->
           # CSV format: id,Season,Squad,W,D,L,GF,GA,Pts,...
           parts = String.split(line, ",")
+
           if length(parts) >= 9 do
             season = Enum.at(parts, 1)
             raw_squad = Enum.at(parts, 2)
             pts_str = Enum.at(parts, 8)
-            
-            squad_key = String.downcase(raw_squad) |> String.replace("united", "utd") |> String.replace("wednesday", "weds") |> String.replace("athletic", "ath") |> String.replace("nottingham", "nott'ham")
-            
+
+            squad_key =
+              String.downcase(raw_squad)
+              |> String.replace("united", "utd")
+              |> String.replace("wednesday", "weds")
+              |> String.replace("athletic", "ath")
+              |> String.replace("nottingham", "nott'ham")
+
             case Integer.parse(pts_str) do
               {pts, _} -> Map.put(acc, {season, squad_key}, pts)
               _ -> acc
@@ -219,6 +252,7 @@ defmodule Seeds do
             acc
           end
         end)
+
       _ ->
         %{}
     end
@@ -226,7 +260,13 @@ defmodule Seeds do
 
   # Map real club name to CSV normalized squad name
   defp map_to_csv_team_name(name) do
-    norm = String.downcase(name) |> String.replace("united", "utd") |> String.replace("wednesday", "weds") |> String.replace("athletic", "ath") |> String.replace("nottingham", "nott'ham")
+    norm =
+      String.downcase(name)
+      |> String.replace("united", "utd")
+      |> String.replace("wednesday", "weds")
+      |> String.replace("athletic", "ath")
+      |> String.replace("nottingham", "nott'ham")
+
     cond do
       norm == "queens park rangers" -> "qpr"
       norm == "wolverhampton wanderers" -> "wolves"
@@ -239,6 +279,7 @@ defmodule Seeds do
   defp find_all_club_names(dataset_path, seasons_dirs) do
     Enum.reduce(seasons_dirs, MapSet.new(), fn dir, acc ->
       dir_path = Path.join(dataset_path, dir)
+
       File.ls!(dir_path)
       |> Enum.filter(&String.ends_with?(&1, ".json"))
       |> Enum.map(&parse_club_name_from_filename/1)
@@ -250,7 +291,7 @@ defmodule Seeds do
   defp parse_club_name_from_filename(filename) do
     parts = String.split(filename, "_")
     id_idx = Enum.find_index(parts, fn part -> String.match?(part, ~r/^\d+$/) end)
-    
+
     if id_idx do
       Enum.take(parts, id_idx) |> Enum.join(" ")
     else
@@ -282,17 +323,34 @@ defmodule Seeds do
   # Convert raw position to GK, DF, MF, FW
   defp map_position_group(pos) do
     cond do
-      pos == "Goalkeeper" -> "GK"
-      pos in ["Centre-Back", "Left-Back", "Right-Back", "Defender", "Sweeper"] -> "DF"
-      pos in ["Central Midfield", "Defensive Midfield", "Attacking Midfield", "Left Midfield", "Right Midfield", "Midfielder"] -> "MF"
-      pos in ["Centre-Forward", "Second Striker", "Striker", "Left Winger", "Right Winger"] -> "FW"
-      true -> "MF"
+      pos == "Goalkeeper" ->
+        "GK"
+
+      pos in ["Centre-Back", "Left-Back", "Right-Back", "Defender", "Sweeper"] ->
+        "DF"
+
+      pos in [
+        "Central Midfield",
+        "Defensive Midfield",
+        "Attacking Midfield",
+        "Left Midfield",
+        "Right Midfield",
+        "Midfielder"
+      ] ->
+        "MF"
+
+      pos in ["Centre-Forward", "Second Striker", "Striker", "Left Winger", "Right Winger"] ->
+        "FW"
+
+      true ->
+        "MF"
     end
   end
 
   # Display name format: "D. Seaman", "T. Adams"
   defp make_display_name(full_name) do
     parts = String.split(full_name)
+
     case parts do
       [] -> ""
       [single] -> single
@@ -304,25 +362,28 @@ defmodule Seeds do
   defp calculate_player_ovr(player_data, club_base_rating) do
     base = club_base_rating
     mv_str = player_data["marketValue"]
-    
-    mv_modifier = 
+
+    mv_modifier =
       if mv_str && mv_str != "None" do
         cleaned = String.replace(mv_str, "€", "") |> String.trim()
-        val = 
+
+        val =
           cond do
             String.ends_with?(cleaned, "m") ->
               {num, _} = Float.parse(String.replace(cleaned, "m", ""))
               num * 1_000_000
+
             String.ends_with?(cleaned, "k") ->
               {num, _} = Float.parse(String.replace(cleaned, "k", ""))
               num * 1_000
+
             true ->
               case Float.parse(cleaned) do
                 {num, _} -> num
                 _ -> 0.0
               end
           end
-        
+
         # More conservative market value scaling to prevent inflated ratings:
         # e.g., 100M+ = +10, 60M = +7, 35M = +4, 20M = +2, 10M = +1, 5M = +0, 2M = -2, 1M = -4, <1M = -6
         cond do
@@ -337,7 +398,7 @@ defmodule Seeds do
           true -> -6
         end
       else
-        age = 
+        age =
           case Integer.parse(Map.get(player_data, "age") || "") do
             {val, _} -> val
             _ -> 25
@@ -353,13 +414,15 @@ defmodule Seeds do
 
     # Deterministic pseudo-random variance based on player name hash
     hash = :erlang.phash2(player_data["name"])
-    variance = rem(hash, 7) - 3 # -3 to +3
-    
+    # -3 to +3
+    variance = rem(hash, 7) - 3
+
     clamp(base + mv_modifier + variance, 60, 97)
   end
 
   defp gen_outfield_stats(pos, rating) do
     base = rating - 5
+
     case pos do
       "DF" ->
         %{
@@ -395,6 +458,7 @@ defmodule Seeds do
 
   defp gen_gk_stats(rating) do
     base = rating - 3
+
     %{
       div: clamp(base, 50, 99),
       han: clamp(base, 50, 99),

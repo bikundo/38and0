@@ -58,7 +58,11 @@ defmodule Invincibles.Game.Appearance do
             changeset
           end
         else
-          add_error(changeset, :stats, "must contain either all GK stats (div, han, kic, ref, spd, pos) or all outfield stats (pac, sho, pas, dri, def, phy)")
+          add_error(
+            changeset,
+            :stats,
+            "must contain either all GK stats (div, han, kic, ref, spd, pos) or all outfield stats (pac, sho, pas, dri, def, phy)"
+          )
         end
     end
   end

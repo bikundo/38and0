@@ -103,3 +103,22 @@
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
 /* This file is for your main application CSS */
+
+:root {
+  --colors-canvas: #000000;
+  --colors-surface-1: #111111;
+  --colors-surface-2: #1e1e1e;
+  --colors-surface-3: #2d2d2d;
+  --colors-hairline: rgba(178, 182, 189, 0.1);
+  --colors-ink: #ffffff;
+  --colors-ink-muted: #b2b6bd;
+  --colors-ink-subtle: #656a76;
+  
+  --colors-product-terraform: #5c4ee5;
+  --colors-product-vault: #f3c63f;
+  --colors-product-waypoint: #00bcd4;
+  --colors-product-consul: #f44336;
+  --colors-product-nomad: #4caf50;
+  --colors-product-boundary: #ff7043;
+}
+

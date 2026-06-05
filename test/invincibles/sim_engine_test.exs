@@ -50,20 +50,13 @@ defmodule Invincibles.Game.SimEngineTest do
     assert is_integer(ga)
   end
 
-  test "simulate_season/1 runs simulation and halts on first non-win or goes to 38 games", %{lineup: lineup} do
+  test "simulate_season/1 always plays all 38 games", %{lineup: lineup} do
     strengths = SimEngine.calculate_strengths(lineup)
     record = SimEngine.simulate_season(strengths)
 
-    assert record.week >= 1 and record.week <= 38
-    assert record.wins + record.draws + record.losses == record.week
-
-    # If the run ended early, the last match must be a draw or loss
-    if record.week < 38 do
-      last_match = List.last(record.matches)
-      assert last_match.result in [:draw, :loss]
-    else
-      # If completed 38 matches, check if we actually won all of them
-      assert record.wins == 38
-    end
+    assert record.week == 38
+    assert length(record.matches) == 38
+    assert record.wins + record.draws + record.losses == 38
+    assert record.wins >= 0 and record.draws >= 0 and record.losses >= 0
   end
 end
