@@ -25,11 +25,69 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/invincibles"
 import topbar from "../vendor/topbar"
 
+const Hooks = {
+  DragDropLineup: {
+    mounted() {
+      this.el.addEventListener("dragstart", e => {
+        const card = e.target.closest("[draggable='true']");
+        if (!card) return;
+        const appId = card.dataset.appearanceId;
+        const rawPositions = card.dataset.positions || "";
+        const positions = rawPositions.split(",").filter(Boolean);
+
+        e.dataTransfer.setData("text/plain", appId);
+        e.dataTransfer.effectAllowed = "move";
+
+        // Highlight eligible slots
+        const slots = this.el.querySelectorAll(".pitch-slot");
+        slots.forEach(slot => {
+          const posKey = slot.dataset.positionKey;
+          if (positions.includes(posKey)) {
+            slot.classList.add("ring-4", "ring-indigo-400", "ring-offset-2", "ring-offset-slate-900", "animate-pulse");
+          } else {
+            slot.classList.add("opacity-30");
+          }
+        });
+      });
+
+      this.el.addEventListener("dragend", e => {
+        const slots = this.el.querySelectorAll(".pitch-slot");
+        slots.forEach(slot => {
+          slot.classList.remove("ring-4", "ring-indigo-400", "ring-offset-2", "ring-offset-slate-900", "animate-pulse", "opacity-30");
+        });
+      });
+
+      this.el.addEventListener("dragover", e => {
+        if (e.target.closest(".pitch-slot.ring-4")) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+        }
+      });
+
+      this.el.addEventListener("drop", e => {
+        const slot = e.target.closest(".pitch-slot.ring-4");
+        if (!slot) return;
+        e.preventDefault();
+
+        const appId = e.dataTransfer.getData("text/plain");
+        const posKey = slot.dataset.positionKey;
+
+        if (appId && posKey) {
+          this.pushEvent("draft_player", {
+            "appearance-id": appId,
+            "position-key": posKey
+          });
+        }
+      });
+    }
+  }
+};
+
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks},
+  hooks: {...colocatedHooks, ...Hooks},
 })
 
 // Show progress bar on live navigation and form submits

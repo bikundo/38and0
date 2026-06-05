@@ -58,13 +58,12 @@ defmodule InvinciblesWeb.GameLive do
   @impl true
   def handle_event("start_game", _params, socket) do
     socket = reset_state(socket)
-    eligible = get_eligible_positions(socket.assigns.lineup)
 
-    case Game.spin_wheel(eligible) do
-      {:ok, club, era, appearances} ->
+    case Game.spin_wheel() do
+      {:ok, club, season, appearances} ->
         socket =
           socket
-          |> assign(:current_spin, {club, era})
+          |> assign(:current_spin, {club, season})
           |> assign(:draft_pool, appearances)
           |> assign(:step, :drafting)
           |> clear_flash()
@@ -78,14 +77,11 @@ defmodule InvinciblesWeb.GameLive do
 
   @impl true
   def handle_event("spin_wheel", _params, socket) do
-    eligible = get_eligible_positions(socket.assigns.lineup)
-
-    # Queries the database for 4 random appearances matching the selected Club & Era
-    case Game.spin_wheel(eligible) do
-      {:ok, club, era, appearances} ->
+    case Game.spin_wheel() do
+      {:ok, club, season, appearances} ->
         socket =
           socket
-          |> assign(:current_spin, {club, era})
+          |> assign(:current_spin, {club, season})
           |> assign(:draft_pool, appearances)
           |> assign(:step, :drafting)
           |> clear_flash()
@@ -193,21 +189,17 @@ defmodule InvinciblesWeb.GameLive do
   end
 
 
-  # Helper to get all eligible position groups that have empty slots in the lineup
-  defp get_eligible_positions(lineup) do
-    Enum.reduce(@positions_mapping, [], fn {pos_group, slots}, acc ->
-      if Enum.any?(slots, &is_nil(Map.get(lineup, &1))) do
-        [pos_group | acc]
-      else
-        acc
-      end
-    end)
-  end
-
   # Helper to get the list of empty compatible slots for a player's primary position
   defp compatible_empty_slots(lineup, primary_position) do
     slots = Map.get(@positions_mapping, primary_position, [])
     Enum.filter(slots, &is_nil(Map.get(lineup, &1)))
+  end
+
+  # Helper to check if a player is already drafted in the lineup
+  defp player_already_drafted?(lineup, player_id) do
+    Enum.any?(lineup, fn {_, app} ->
+      not is_nil(app) and app.player_id == player_id
+    end)
   end
 
 
@@ -246,7 +238,7 @@ defmodule InvinciblesWeb.GameLive do
       </header>
 
       <!-- Main container -->
-      <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <main id="game-main-container" phx-hook="DragDropLineup" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
         <!-- Left 8 columns: Game Board & Lineup Pitch -->
         <div class="lg:col-span-8 flex flex-col gap-6">
@@ -259,24 +251,30 @@ defmodule InvinciblesWeb.GameLive do
           <% end %>
 
           <!-- The Soccer Pitch Lineup View -->
-          <div class="relative bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-900 rounded-3xl p-6 overflow-hidden min-h-[600px] flex flex-col justify-between shadow-2xl">
-            <!-- Grid pitch markings overlay -->
-            <div class="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-500/20 via-transparent to-transparent"></div>
-            <div class="absolute inset-x-0 top-1/2 h-[1px] bg-white/5 -translate-y-1/2 pointer-events-none"></div>
-            <div class="absolute top-1/2 left-1/2 w-48 h-48 border border-white/5 rounded-full -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
-            <div class="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-24 border-b border-x border-white/5 pointer-events-none"></div>
-            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-64 h-24 border-t border-x border-white/5 pointer-events-none"></div>
+          <div id="game-pitch-container" class="relative bg-emerald-800 border-4 border-emerald-700 rounded-3xl p-6 overflow-hidden min-h-[660px] flex flex-col justify-between shadow-2xl select-none">
+            <!-- Alternating Grass Stripes -->
+            <div class="absolute inset-0 pointer-events-none opacity-90" style="background: repeating-linear-gradient(0deg, #065f46, #065f46 60px, #047857 60px, #047857 120px);"></div>
+            
+            <!-- Soccer Pitch Lines -->
+            <div class="absolute inset-4 border-2 border-white/20 rounded-2xl pointer-events-none"></div>
+            <div class="absolute inset-x-4 top-1/2 h-0.5 bg-white/20 -translate-y-1/2 pointer-events-none"></div>
+            <div class="absolute top-1/2 left-1/2 w-36 h-36 border-2 border-white/20 rounded-full -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+            <!-- Goal Areas / Penalty Boxes -->
+            <div class="absolute top-4 left-1/2 -translate-x-1/2 w-80 h-32 border-b-2 border-x-2 border-white/20 pointer-events-none"></div>
+            <div class="absolute bottom-4 left-1/2 -translate-x-1/2 w-80 h-32 border-t-2 border-x-2 border-white/20 pointer-events-none"></div>
 
             <!-- Attacking Line (LW, ST, RW) -->
-            <div class="flex justify-around items-center gap-2 z-10">
+            <div class="flex justify-around items-center gap-2 z-10 mt-2">
               <%= for pos <- [:lw, :st, :rw] do %>
                 <div class="flex flex-col items-center">
                   <%= if card = @lineup[pos] do %>
-                    <.player_card appearance={card} selected_pos={@position_names[pos]} />
+                    <.player_card appearance={card} selected_pos={@position_names[pos]} simple={true} class="!w-28 !h-40 !p-2.5 !rounded-lg" />
                   <% else %>
-                    <div class="w-28 h-40 rounded-xl border-2 border-dashed border-slate-800 bg-slate-950/40 flex flex-col items-center justify-center text-slate-600 gap-1 shadow-inner">
-                      <span class="text-lg font-black tracking-wide text-slate-500"><%= @position_names[pos] %></span>
-                      <span class="text-[9px] font-semibold opacity-60">EMPTY</span>
+                    <div data-position-key={pos} class="pitch-slot w-28 h-40 rounded-xl border-2 border-dashed border-white/40 bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center text-white/60 gap-1.5 shadow-inner transition-all duration-200">
+                      <div class="w-10 h-10 rounded-full border border-white/30 flex items-center justify-center text-white/50 bg-white/5 font-extrabold text-sm">
+                        <%= @position_names[pos] %>
+                      </div>
+                      <span class="text-[9px] font-black tracking-wider uppercase opacity-80">DROP ZONE</span>
                     </div>
                   <% end %>
                 </div>
@@ -284,15 +282,17 @@ defmodule InvinciblesWeb.GameLive do
             </div>
 
             <!-- Midfield Line (LM, CM, RM) -->
-            <div class="flex justify-around items-center gap-2 z-10 my-6">
+            <div class="flex justify-around items-center gap-2 z-10 my-4">
               <%= for pos <- [:lm, :cm, :rm] do %>
                 <div class="flex flex-col items-center">
                   <%= if card = @lineup[pos] do %>
-                    <.player_card appearance={card} selected_pos={@position_names[pos]} />
+                    <.player_card appearance={card} selected_pos={@position_names[pos]} simple={true} class="!w-28 !h-40 !p-2.5 !rounded-lg" />
                   <% else %>
-                    <div class="w-28 h-40 rounded-xl border-2 border-dashed border-slate-800 bg-slate-950/40 flex flex-col items-center justify-center text-slate-600 gap-1 shadow-inner">
-                      <span class="text-lg font-black tracking-wide text-slate-500"><%= @position_names[pos] %></span>
-                      <span class="text-[9px] font-semibold opacity-60">EMPTY</span>
+                    <div data-position-key={pos} class="pitch-slot w-28 h-40 rounded-xl border-2 border-dashed border-white/40 bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center text-white/60 gap-1.5 shadow-inner transition-all duration-200">
+                      <div class="w-10 h-10 rounded-full border border-white/30 flex items-center justify-center text-white/50 bg-white/5 font-extrabold text-sm">
+                        <%= @position_names[pos] %>
+                      </div>
+                      <span class="text-[9px] font-black tracking-wider uppercase opacity-80">DROP ZONE</span>
                     </div>
                   <% end %>
                 </div>
@@ -304,11 +304,13 @@ defmodule InvinciblesWeb.GameLive do
               <%= for pos <- [:lb, :cb1, :cb2, :rb] do %>
                 <div class="flex flex-col items-center">
                   <%= if card = @lineup[pos] do %>
-                    <.player_card appearance={card} selected_pos={@position_names[pos]} />
+                    <.player_card appearance={card} selected_pos={@position_names[pos]} simple={true} class="!w-24 !h-36 !p-2 !rounded-lg" />
                   <% else %>
-                    <div class="w-28 h-40 rounded-xl border-2 border-dashed border-slate-800 bg-slate-950/40 flex flex-col items-center justify-center text-slate-600 gap-1 shadow-inner">
-                      <span class="text-lg font-black tracking-wide text-slate-500"><%= @position_names[pos] %></span>
-                      <span class="text-[9px] font-semibold opacity-60">EMPTY</span>
+                    <div data-position-key={pos} class="pitch-slot w-24 h-36 rounded-xl border-2 border-dashed border-white/40 bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center text-white/60 gap-1 shadow-inner transition-all duration-200">
+                      <div class="w-8 h-8 rounded-full border border-white/30 flex items-center justify-center text-white/50 bg-white/5 font-extrabold text-xs">
+                        <%= @position_names[pos] %>
+                      </div>
+                      <span class="text-[8px] font-black tracking-wider uppercase opacity-80">DROP ZONE</span>
                     </div>
                   <% end %>
                 </div>
@@ -316,14 +318,16 @@ defmodule InvinciblesWeb.GameLive do
             </div>
 
             <!-- Goalkeeper (GK) -->
-            <div class="flex justify-center items-center z-10 mt-6">
+            <div class="flex justify-center items-center z-10 mb-2">
               <div class="flex flex-col items-center">
                 <%= if card = @lineup[:gk] do %>
-                  <.player_card appearance={card} selected_pos={@position_names[:gk]} />
+                  <.player_card appearance={card} selected_pos={@position_names[:gk]} simple={true} class="!w-28 !h-40 !p-2.5 !rounded-lg" />
                 <% else %>
-                  <div class="w-28 h-40 rounded-xl border-2 border-dashed border-slate-800 bg-slate-950/40 flex flex-col items-center justify-center text-slate-600 gap-1 shadow-inner">
-                    <span class="text-lg font-black tracking-wide text-slate-500"><%= @position_names[:gk] %></span>
-                    <span class="text-[9px] font-semibold opacity-60">EMPTY</span>
+                  <div data-position-key="gk" class="pitch-slot w-28 h-40 rounded-xl border-2 border-dashed border-white/40 bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center text-white/60 gap-1.5 shadow-inner transition-all duration-200">
+                    <div class="w-10 h-10 rounded-full border border-white/30 flex items-center justify-center text-white/50 bg-white/5 font-extrabold text-sm">
+                      <%= @position_names[:gk] %>
+                    </div>
+                    <span class="text-[9px] font-black tracking-wider uppercase opacity-80">DROP ZONE</span>
                   </div>
                 <% end %>
               </div>
@@ -382,14 +386,14 @@ defmodule InvinciblesWeb.GameLive do
                 </div>
                 
                 <%= if @current_spin do %>
-                  <% {club, era} = @current_spin %>
+                  <% {club, season} = @current_spin %>
                   <div class="flex items-center justify-between bg-slate-950/60 border border-slate-800/80 rounded-xl p-3.5 shadow-inner mb-4">
                     <div class="flex items-center gap-2">
                       <span class="w-3.5 h-3.5 rounded-full" style={"background-color: #{club.primary_color};"}></span>
                       <span class="font-extrabold text-sm text-slate-200"><%= club.name %></span>
                     </div>
                     <span class="bg-slate-800 text-slate-200 text-xs font-black px-2.5 py-1 rounded">
-                      <%= era %>
+                      <%= season %>
                     </span>
                   </div>
                 <% end %>
@@ -398,7 +402,7 @@ defmodule InvinciblesWeb.GameLive do
                 
                 <%= if Enum.empty?(@draft_pool) do %>
                   <div class="text-center py-6 bg-slate-950/40 rounded-xl border border-dashed border-slate-800">
-                    <p class="text-xs text-slate-500 mb-4">No eligible historical players found for this Club + Era constraint.</p>
+                    <p class="text-xs text-slate-500 mb-4">No eligible historical players found for this Club + Year constraint.</p>
                     <button
                       phx-click="spin_wheel"
                       class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold px-4 py-2 rounded-lg"
@@ -409,7 +413,18 @@ defmodule InvinciblesWeb.GameLive do
                 <% else %>
                   <div class="flex flex-col gap-4 max-h-[420px] overflow-y-auto pr-1">
                     <%= for app <- @draft_pool do %>
-                      <div class="bg-slate-950/40 border border-slate-800/60 rounded-2xl p-3 flex gap-3 hover:border-slate-700 transition-colors">
+                      <% already_drafted = player_already_drafted?(@lineup, app.player_id) %>
+                      <% compatible_slots = compatible_empty_slots(@lineup, app.player.primary_position) %>
+                      <% unselectable = already_drafted or Enum.empty?(compatible_slots) %>
+                      <div
+                        draggable="true"
+                        data-appearance-id={app.id}
+                        data-positions={Enum.join(compatible_slots, ",")}
+                        class={[
+                          "bg-slate-950/40 border border-slate-800/60 rounded-2xl p-3 flex gap-3 transition-all duration-200 hover:border-slate-700 cursor-grab active:cursor-grabbing",
+                          unselectable && "opacity-40 grayscale pointer-events-none"
+                        ]}
+                      >
                         <!-- Tiny Player Card Preview -->
                         <div class="flex-shrink-0">
                           <.player_card appearance={app} class="!w-24 !h-36 !p-2 !rounded-lg" />
@@ -423,22 +438,26 @@ defmodule InvinciblesWeb.GameLive do
                           </div>
 
                           <div class="flex flex-wrap gap-1.5 mt-2">
-                            <% compatible_slots = compatible_empty_slots(@lineup, app.player.primary_position) %>
-                            <%= if Enum.empty?(compatible_slots) do %>
-                              <span class="text-[9px] font-bold text-slate-500 bg-slate-800 px-2 py-1 rounded-md uppercase">
-                                No Empty Slots
-                              </span>
-                            <% else %>
-                              <%= for slot <- compatible_slots do %>
-                                <button
-                                  phx-click="draft_player"
-                                  phx-value-appearance-id={app.id}
-                                  phx-value-position-key={slot}
-                                  class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-extrabold text-[9px] px-2 py-1 rounded shadow-sm tracking-wider uppercase transition-all"
-                                >
-                                  As <%= @position_names[slot] %>
-                                </button>
-                              <% end %>
+                            <%= cond do %>
+                              <% already_drafted -> %>
+                                <span class="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-2 py-1 rounded-md uppercase">
+                                  Already Drafted
+                                </span>
+                              <% Enum.empty?(compatible_slots) -> %>
+                                <span class="text-[9px] font-bold text-slate-500 bg-slate-800 px-2 py-1 rounded-md uppercase">
+                                  No Empty Slots
+                                </span>
+                              <% true -> %>
+                                <%= for slot <- compatible_slots do %>
+                                  <button
+                                    phx-click="draft_player"
+                                    phx-value-appearance-id={app.id}
+                                    phx-value-position-key={slot}
+                                    class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-extrabold text-[9px] px-2 py-1 rounded shadow-sm tracking-wider uppercase transition-all"
+                                  >
+                                    As <%= @position_names[slot] %>
+                                  </button>
+                                <% end %>
                             <% end %>
                           </div>
                         </div>

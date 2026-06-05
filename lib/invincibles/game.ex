@@ -4,37 +4,45 @@ defmodule Invincibles.Game do
   """
   import Ecto.Query
   alias Invincibles.Repo
-  alias Invincibles.Game.Club
   alias Invincibles.Game.Appearance
 
-  @eras ["90s", "00s", "10s", "20s"]
-
   @doc """
-  Randomly selects a club and era, then returns 4 random appearances matching them.
+  Randomly selects a club and season from existing database appearances,
+  then returns all appearances matching that club and season.
   Preloads the associated player and club.
   """
-  def spin_wheel(eligible_positions \\ ["GK", "DF", "MF", "FW"]) do
-    # Fetch all clubs to pick one randomly
-    clubs = Repo.all(Club)
-    
-    if Enum.empty?(clubs) do
-      {:error, :no_clubs}
-    else
-      club = Enum.random(clubs)
-      era = Enum.random(@eras)
+  def spin_wheel do
+    top_6_names = ["Arsenal", "Manchester United", "Chelsea", "Liverpool", "Manchester City", "Tottenham Hotspur"]
 
-      # Fetch 4 random appearances matching club and era and position constraints
-      appearances =
-        from(a in Appearance,
-          join: p in assoc(a, :player),
-          where: a.club_id == ^club.id and a.era == ^era and p.primary_position in ^eligible_positions,
-          order_by: fragment("RANDOM()"),
-          limit: 4,
-          preload: [:player, :club]
-        )
-        |> Repo.all()
+    # 1. Fetch a random appearance from the DB to get a valid club + season (Top 6 only)
+    random_app =
+      from(a in Appearance,
+        join: c in assoc(a, :club),
+        where: c.name in ^top_6_names,
+        order_by: fragment("RANDOM()"),
+        limit: 1,
+        preload: [:club]
+      )
+      |> Repo.one()
 
-      {:ok, club, era, appearances}
+    case random_app do
+      nil ->
+        {:error, :no_data}
+
+      app ->
+        club = app.club
+        season = app.season
+
+        # 2. Fetch ALL appearances for that club and season
+        appearances =
+          from(a in Appearance,
+            where: a.club_id == ^club.id and a.season == ^season,
+            order_by: a.ovr,
+            preload: [:player, :club]
+          )
+          |> Repo.all()
+
+        {:ok, club, season, appearances}
     end
   end
 
