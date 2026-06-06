@@ -247,7 +247,8 @@ defmodule Invincibles.Game.SimEngine do
       # Build 38 fixtures
       fixtures = build_fixtures(clubs)
 
-      results =
+      # Simulate matches for our team
+      our_matches =
         Enum.reduce(
           Enum.with_index(fixtures, 1),
           %{week: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, matches: []},
@@ -276,7 +277,128 @@ defmodule Invincibles.Game.SimEngine do
           end
         )
 
-      Map.put(results, :season_label, season)
+      # Simulate all remaining non-user matches to build a complete league table
+      # 20 teams total (User + 19 Opponents). Each plays 38 games.
+      # Start with a map representing stats of each team.
+      initial_table =
+        Enum.into(
+          clubs,
+          %{
+            "INV" => %{
+              name: "INVINCIBLES",
+              short: "INV",
+              w: our_matches.wins,
+              d: our_matches.draws,
+              l: our_matches.losses,
+              gf: our_matches.gf,
+              ga: our_matches.ga,
+              pts: our_matches.wins * 3 + our_matches.draws
+            }
+          },
+          fn club ->
+            # Count opponent's stats against us
+            matches_against_us =
+              Enum.filter(our_matches.matches, &(&1.opponent_short == club.short_name))
+
+            # user loss = opponent win
+            w = Enum.count(matches_against_us, &(&1.result == :loss))
+            d = Enum.count(matches_against_us, &(&1.result == :draw))
+            l = Enum.count(matches_against_us, &(&1.result == :win))
+            gf = Enum.sum(Enum.map(matches_against_us, & &1.ga))
+            ga = Enum.sum(Enum.map(matches_against_us, & &1.gf))
+
+            {club.short_name,
+             %{
+               name: club.name,
+               short: club.short_name,
+               w: w,
+               d: d,
+               l: l,
+               gf: gf,
+               ga: ga,
+               pts: w * 3 + d
+             }}
+          end
+        )
+
+      # Simulate remaining matches between opponents.
+      # Each opponent plays every other opponent twice (home & away), minus the games against the User (which we already computed).
+      opponents_list = Map.keys(initial_table) |> List.delete("INV")
+
+      league_table_map =
+        Enum.reduce(opponents_list, initial_table, fn t1, table_acc ->
+          other_opps = List.delete(opponents_list, t1)
+
+          Enum.reduce(other_opps, table_acc, fn t2, inner_table_acc ->
+            # Only simulate if they haven't played their double-header matches yet.
+            # We enforce an arbitrary sorting condition to avoid double simulating.
+            if t1 < t2 do
+              club1 = Enum.find(clubs, &(&1.short_name == t1))
+              club2 = Enum.find(clubs, &(&1.short_name == t2))
+              t1_strengths = Map.fetch!(opponent_strengths_map, club1.id)
+              t2_strengths = Map.fetch!(opponent_strengths_map, club2.id)
+
+              # Match 1 (t1 home)
+              {res1, gf1, ga1} = simulate_match_against_opponent(t1_strengths, t2_strengths)
+              # Match 2 (t2 home)
+              {res2, gf2, ga2} = simulate_match_against_opponent(t2_strengths, t1_strengths)
+
+              # Update stats for t1
+              inner_table_acc =
+                update_in(inner_table_acc, [t1], fn stats ->
+                  w1 = if(res1 == :win, do: 1, else: 0) + if(res2 == :loss, do: 1, else: 0)
+                  d1 = if(res1 == :draw, do: 1, else: 0) + if(res2 == :draw, do: 1, else: 0)
+                  l1 = if(res1 == :loss, do: 1, else: 0) + if(res2 == :win, do: 1, else: 0)
+
+                  stats
+                  |> Map.update!(:w, &(&1 + w1))
+                  |> Map.update!(:d, &(&1 + d1))
+                  |> Map.update!(:l, &(&1 + l1))
+                  |> Map.update!(:gf, &(&1 + gf1 + ga2))
+                  |> Map.update!(:ga, &(&1 + ga1 + gf2))
+                  |> Map.update!(:pts, &(&1 + w1 * 3 + d1))
+                end)
+
+              # Update stats for t2
+              update_in(inner_table_acc, [t2], fn stats ->
+                w2 = if(res1 == :loss, do: 1, else: 0) + if(res2 == :win, do: 1, else: 0)
+                d2 = if(res1 == :draw, do: 1, else: 0) + if(res2 == :draw, do: 1, else: 0)
+                l2 = if(res1 == :win, do: 1, else: 0) + if(res2 == :loss, do: 1, else: 0)
+
+                stats
+                |> Map.update!(:w, &(&1 + w2))
+                |> Map.update!(:d, &(&1 + d2))
+                |> Map.update!(:l, &(&1 + l2))
+                |> Map.update!(:gf, &(&1 + ga1 + gf2))
+                |> Map.update!(:ga, &(&1 + gf1 + ga2))
+                |> Map.update!(:pts, &(&1 + w2 * 3 + d2))
+              end)
+            else
+              inner_table_acc
+            end
+          end)
+        end)
+
+      # Sort the table by Pts (desc), then GD (desc), then GF (desc)
+      sorted_table =
+        Map.values(league_table_map)
+        |> Enum.sort(fn a, b ->
+          gd_a = a.gf - a.ga
+          gd_b = b.gf - b.ga
+
+          cond do
+            a.pts != b.pts -> a.pts > b.pts
+            gd_a != gd_b -> gd_a > gd_b
+            a.gf != b.gf -> a.gf > b.gf
+            true -> a.name < b.name
+          end
+        end)
+        |> Enum.with_index(1)
+        |> Enum.map(fn {team_stats, pos} -> Map.put(team_stats, :position, pos) end)
+
+      our_matches
+      |> Map.put(:season_label, season)
+      |> Map.put(:league_table, sorted_table)
     end
   end
 

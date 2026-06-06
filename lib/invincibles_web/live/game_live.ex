@@ -508,10 +508,13 @@ defmodule InvinciblesWeb.GameLive do
                 </div>
               </div>
             </div>
-            
-    <!-- Record Details card (Only shown on game over or hall of fame) -->
+            <!-- End share-capture-area -->
+
             <%= if @step in [:game_over, :hall_of_fame] do %>
-              <div class="bg-[#111111] border border-[rgba(178,182,189,0.1)] rounded-[8px] p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div
+                id="standings-table-card"
+                class="bg-[#111111] border border-[rgba(178,182,189,0.1)] rounded-[8px] p-6 flex flex-col md:flex-row md:items-center justify-between gap-6"
+              >
                 <div>
                   <span class="text-[10px] font-semibold text-[#656a76] uppercase tracking-[0.6px]">
                     {if @step == :hall_of_fame, do: "Golden Campaign", else: "Final Season Record"}
@@ -545,19 +548,28 @@ defmodule InvinciblesWeb.GameLive do
                   <% end %>
                 </div>
 
-                <div>
+                <div data-html2canvas-ignore="true">
                   <button
                     id="share-btn"
                     phx-hook="ShareButton"
+                    data-wins={@season_record.wins}
+                    data-draws={@season_record.draws}
+                    data-losses={@season_record.losses}
+                    data-points={@season_record.wins * 3 + @season_record.draws}
+                    data-season={
+                      if @sim_results, do: Map.get(@sim_results, :season_label, ""), else: ""
+                    }
                     class="bg-white text-slate-950 hover:bg-neutral-200 font-semibold py-[10px] px-[18px] rounded-[8px] transition-colors duration-150 active:scale-[0.98] text-xs flex items-center gap-2"
                   >
-                    <.icon name="hero-share" class="w-4 h-4 text-slate-950" /> SHARE RESULT
+                    <svg class="w-4 h-4 fill-current text-slate-950" viewBox="0 0 24 24">
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                    </svg>
+                    SHARE TO TWITTER
                   </button>
                 </div>
               </div>
             <% end %>
           </div>
-          <!-- End share-capture-area -->
         </div>
         <!-- End lg:col-span-8 -->
         <!-- Right 4 columns: Game Controllers / Draft pool -->

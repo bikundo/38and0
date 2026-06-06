@@ -32,18 +32,13 @@ defmodule InvinciblesWeb.Components.PlayerCard do
     <div
       phx-click={@on_click}
       class={[
-        "relative w-48 h-72 rounded-xl flex flex-col justify-between p-4 select-none cursor-pointer transition-all duration-300 hover:scale-105 hover:-translate-y-1 active:scale-95 shadow-lg",
-        @theme.bg_gradient,
+        "relative w-48 h-72 rounded-xl flex flex-col justify-between p-4 select-none cursor-pointer transition-all duration-300 hover:scale-105 hover:-translate-y-1 active:scale-95 shadow-md",
+        @theme.bg_color,
         @theme.text_color,
         @theme.border_color,
         @class
       ]}
-      style={@club && "border-left-width: 4px; border-left-color: #{@club.primary_color};"}
     >
-      <!-- Glossy Reflection Overlay -->
-      <div class="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/20 rounded-xl pointer-events-none">
-      </div>
-
       <%= if @simple do %>
         <!-- Simplified Card Content (for pitch) -->
         <div class="flex flex-col justify-between h-full w-full">
@@ -64,12 +59,12 @@ defmodule InvinciblesWeb.Components.PlayerCard do
           </div>
           
     <!-- Bottom: Last Name -->
-          <div class="text-center mt-auto pb-1">
-            <div class="text-[10px] font-black uppercase tracking-wide truncate max-w-full">
+          <div class="text-center mt-auto pb-1 px-1">
+            <div class="text-[9px] font-black uppercase tracking-wide truncate max-w-full leading-normal py-0.5">
               {String.upcase(formatted_name(@player.display_name))}
             </div>
             <%= if @selected_pos do %>
-              <div class="text-[8px] font-bold opacity-80 mt-0.5">{@selected_pos}</div>
+              <div class="text-[8px] font-bold opacity-80 mt-0.5 leading-none">{@selected_pos}</div>
             <% end %>
           </div>
         </div>
@@ -181,28 +176,27 @@ defmodule InvinciblesWeb.Components.PlayerCard do
     """
   end
 
-  # Helpers to retrieve themes
   defp get_card_theme(ovr) do
     cond do
       ovr >= 90 ->
         %{
-          bg_gradient: "bg-gradient-to-b from-amber-200 via-yellow-400 to-amber-700",
-          text_color: "text-amber-950",
-          border_color: "border border-amber-300 shadow-yellow-500/25"
+          bg_color: "bg-[#d97706]",
+          text_color: "text-white",
+          border_color: "border border-[#b45309]"
         }
 
       ovr >= 83 ->
         %{
-          bg_gradient: "bg-gradient-to-b from-yellow-50 via-yellow-200 to-yellow-500",
-          text_color: "text-yellow-950",
-          border_color: "border border-yellow-300/60 shadow-yellow-400/10"
+          bg_color: "bg-[#facc15]",
+          text_color: "text-slate-950",
+          border_color: "border border-[#eab308]"
         }
 
       true ->
         %{
-          bg_gradient: "bg-gradient-to-b from-slate-200 via-slate-300 to-slate-500",
-          text_color: "text-slate-950",
-          border_color: "border border-slate-300 shadow-slate-500/10"
+          bg_color: "bg-[#334155]",
+          text_color: "text-white",
+          border_color: "border border-[#1e293b]"
         }
     end
   end
