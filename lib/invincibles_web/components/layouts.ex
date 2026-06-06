@@ -31,41 +31,68 @@ defmodule InvinciblesWeb.Layouts do
     default: nil,
     doc: "the current [scope](https://hexdocs.pm/phoenix/scopes.html)"
 
+  attr :record, :map, default: nil, doc: "the current season record"
+
   slot :inner_block, required: true
 
   def app(assigns) do
     ~H"""
-    <header class="navbar px-4 sm:px-6 lg:px-8">
-      <div class="flex-1">
-        <a href="/" class="flex-1 flex w-fit items-center gap-2">
-          <img src={~p"/images/logo.svg"} width="36" />
-          <span class="text-sm font-semibold">v{Application.spec(:phoenix, :vsn)}</span>
-        </a>
-      </div>
-      <div class="flex-none">
-        <ul class="flex flex-column px-1 space-x-4 items-center">
-          <li>
-            <a href="https://phoenixframework.org/" class="btn btn-ghost">Website</a>
-          </li>
-          <li>
-            <a href="https://github.com/phoenixframework/phoenix" class="btn btn-ghost">GitHub</a>
-          </li>
-          <li>
-            <.theme_toggle />
-          </li>
-          <li>
-            <a href="https://hexdocs.pm/phoenix/overview.html" class="btn btn-primary">
-              Get Started <span aria-hidden="true">&rarr;</span>
+    <header class="bg-white border-b border-[rgba(0,0,0,0.08)] sticky top-0 z-50 shadow-[0_1px_3px_rgba(0,0,0,0.1),_0_2px_2px_rgba(0,0,0,0.06),_0_0_2px_rgba(0,0,0,0.07)]">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-[72px] md:h-[83px] lg:h-[99px] flex items-center justify-between transition-all duration-200">
+        <div class="flex items-center gap-6 md:gap-10">
+          <a href="/" class="flex items-center gap-3">
+            <span class="text-lg md:text-xl font-bold tracking-tighter text-[#006241]">
+              INVINCIBLES
+            </span>
+            <span class="text-[#33433d] text-[10px] md:text-xs font-semibold uppercase tracking-[0.6px]">
+              38-0-0
+            </span>
+          </a>
+
+          <nav class="hidden md:flex items-center gap-6">
+            <a
+              href="#"
+              class="text-xs font-bold uppercase tracking-[0.1em] text-[#006241] border-b-4 border-[#006241] py-4 mt-1"
+            >
+              Draft
             </a>
-          </li>
-        </ul>
+            <a
+              href="#"
+              class="text-xs font-bold uppercase tracking-[0.1em] text-[rgba(0,0,0,0.87)] hover:text-[#00754A] transition-colors py-4"
+            >
+              Simulation
+            </a>
+            <a
+              href="#"
+              class="text-xs font-bold uppercase tracking-[0.1em] text-[rgba(0,0,0,0.87)] hover:text-[#00754A] transition-colors py-4"
+            >
+              Leaderboard
+            </a>
+          </nav>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <%= if @record do %>
+            <div class="flex flex-col text-right">
+              <span class="text-[9px] font-bold text-[rgba(0,0,0,0.58)] uppercase tracking-[0.6px] leading-none">
+                Record
+              </span>
+              <span class="text-sm font-bold tracking-wide text-[rgba(0,0,0,0.87)] mt-1">
+                {@record.wins}W - {@record.draws}D - {@record.losses}L
+              </span>
+            </div>
+            <%= if @record.week > 0 do %>
+              <span class="bg-[#00754A] text-white text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ml-1">
+                Week {@record.week}
+              </span>
+            <% end %>
+          <% end %>
+        </div>
       </div>
     </header>
 
-    <main class="px-4 py-20 sm:px-6 lg:px-8">
-      <div class="mx-auto max-w-2xl space-y-4">
-        {render_slot(@inner_block)}
-      </div>
+    <main class="w-full">
+      {render_slot(@inner_block)}
     </main>
 
     <.flash_group flash={@flash} />

@@ -32,7 +32,7 @@ defmodule InvinciblesWeb.Components.PlayerCard do
     <div
       phx-click={@on_click}
       class={[
-        "relative w-48 h-72 rounded-xl flex flex-col justify-between p-4 select-none cursor-pointer transition-all duration-300 hover:scale-105 hover:-translate-y-1 active:scale-95 shadow-md",
+        "relative w-48 h-72 card-starbucks flex flex-col justify-between p-4 select-none cursor-pointer transition-all duration-300 hover:scale-105 hover:-translate-y-1 active:scale-95 border",
         @theme.bg_color,
         @theme.text_color,
         @theme.border_color,
@@ -45,8 +45,13 @@ defmodule InvinciblesWeb.Components.PlayerCard do
           <!-- Top: OVR and Position -->
           <div class="flex justify-between items-start">
             <div class="flex flex-col items-start">
-              <span class="text-2xl font-black tracking-tight leading-none">{@ovr}</span>
-              <span class="text-[9px] font-black uppercase tracking-wider opacity-90">
+              <span class={[
+                "text-2xl font-black tracking-tight leading-none font-serif-starbucks",
+                @theme.ovr_color
+              ]}>
+                {@ovr}
+              </span>
+              <span class="text-[9px] font-black uppercase tracking-wider opacity-90 mt-0.5">
                 {@player.primary_position}
               </span>
             </div>
@@ -60,8 +65,8 @@ defmodule InvinciblesWeb.Components.PlayerCard do
           
     <!-- Bottom: Last Name -->
           <div class="text-center mt-auto pb-1 px-1">
-            <div class="text-[9px] font-black uppercase tracking-wide truncate max-w-full leading-normal py-0.5">
-              {String.upcase(formatted_name(@player.display_name))}
+            <div class="text-sm font-bold truncate max-w-full leading-normal py-0.5 font-script-starbucks text-slate-800">
+              {formatted_name(@player.display_name)}
             </div>
             <%= if @selected_pos do %>
               <div class="text-[8px] font-bold opacity-80 mt-0.5 leading-none">{@selected_pos}</div>
@@ -73,15 +78,20 @@ defmodule InvinciblesWeb.Components.PlayerCard do
         <!-- Top Section: OVR and Position -->
         <div class="flex justify-between items-start">
           <div class="flex flex-col items-center">
-            <span class="text-3xl font-extrabold tracking-tight leading-none">{@ovr}</span>
-            <span class="text-xs font-bold uppercase tracking-wider opacity-80">
+            <span class={[
+              "text-3xl font-black tracking-tight leading-none font-serif-starbucks",
+              @theme.ovr_color
+            ]}>
+              {@ovr}
+            </span>
+            <span class="text-xs font-bold uppercase tracking-wider opacity-80 mt-0.5">
               {@player.primary_position}
             </span>
           </div>
 
           <div class="flex flex-col items-end text-right">
             <!-- Club primary color dot indicator and Short Name -->
-            <div class="flex items-center gap-1.5 bg-black/10 px-1.5 py-0.5 rounded text-[10px] font-bold">
+            <div class="flex items-center gap-1.5 bg-black/5 px-1.5 py-0.5 rounded text-[10px] font-bold">
               <span class="w-2 h-2 rounded-full" style={"background-color: #{@club.primary_color};"}>
               </span>
               <span>{@club.short_name}</span>
@@ -94,9 +104,11 @@ defmodule InvinciblesWeb.Components.PlayerCard do
         
     <!-- Middle Section: Player Name and Season -->
         <div class="text-center my-2">
-          <div class="text-xs font-semibold tracking-widest opacity-75">{@appearance.season}</div>
-          <div class="text-lg font-black uppercase tracking-wide truncate max-w-full">
-            {String.upcase(formatted_name(@player.display_name))}
+          <div class="text-[10px] font-semibold tracking-wider opacity-75">
+            {String.upcase(@appearance.season)}
+          </div>
+          <div class="text-lg font-bold truncate max-w-full font-script-starbucks text-slate-800">
+            {formatted_name(@player.display_name)}
           </div>
         </div>
         
@@ -106,54 +118,54 @@ defmodule InvinciblesWeb.Components.PlayerCard do
             <%= if @player.primary_position == "GK" do %>
               <!-- GK Stats -->
               <div>
-                <div class="font-extrabold text-sm">{stat_value(@appearance.stats, "div")}</div>
-                <div class="opacity-60 text-[8px] font-bold">DIV</div>
+                <div class="font-bold text-sm">{stat_value(@appearance.stats, "div")}</div>
+                <div class="text-[8px] font-semibold text-[rgba(0,0,0,0.58)]">DIV</div>
               </div>
               <div>
-                <div class="font-extrabold text-sm">{stat_value(@appearance.stats, "han")}</div>
-                <div class="opacity-60 text-[8px] font-bold">HAN</div>
+                <div class="font-bold text-sm">{stat_value(@appearance.stats, "han")}</div>
+                <div class="text-[8px] font-semibold text-[rgba(0,0,0,0.58)]">HAN</div>
               </div>
               <div>
-                <div class="font-extrabold text-sm">{stat_value(@appearance.stats, "kic")}</div>
-                <div class="opacity-60 text-[8px] font-bold">KIC</div>
+                <div class="font-bold text-sm">{stat_value(@appearance.stats, "kic")}</div>
+                <div class="text-[8px] font-semibold text-[rgba(0,0,0,0.58)]">KIC</div>
               </div>
               <div>
-                <div class="font-extrabold text-sm">{stat_value(@appearance.stats, "ref")}</div>
-                <div class="opacity-60 text-[8px] font-bold">REF</div>
+                <div class="font-bold text-sm">{stat_value(@appearance.stats, "ref")}</div>
+                <div class="text-[8px] font-semibold text-[rgba(0,0,0,0.58)]">REF</div>
               </div>
               <div>
-                <div class="font-extrabold text-sm">{stat_value(@appearance.stats, "spd")}</div>
-                <div class="opacity-60 text-[8px] font-bold">SPD</div>
+                <div class="font-bold text-sm">{stat_value(@appearance.stats, "spd")}</div>
+                <div class="text-[8px] font-semibold text-[rgba(0,0,0,0.58)]">SPD</div>
               </div>
               <div>
-                <div class="font-extrabold text-sm">{stat_value(@appearance.stats, "pos")}</div>
-                <div class="opacity-60 text-[8px] font-bold">POS</div>
+                <div class="font-bold text-sm">{stat_value(@appearance.stats, "pos")}</div>
+                <div class="text-[8px] font-semibold text-[rgba(0,0,0,0.58)]">POS</div>
               </div>
             <% else %>
               <!-- Outfield Stats -->
               <div>
-                <div class="font-extrabold text-sm">{stat_value(@appearance.stats, "pac")}</div>
-                <div class="opacity-60 text-[8px] font-bold">PAC</div>
+                <div class="font-bold text-sm">{stat_value(@appearance.stats, "pac")}</div>
+                <div class="text-[8px] font-semibold text-[rgba(0,0,0,0.58)]">PAC</div>
               </div>
               <div>
-                <div class="font-extrabold text-sm">{stat_value(@appearance.stats, "sho")}</div>
-                <div class="opacity-60 text-[8px] font-bold">SHO</div>
+                <div class="font-bold text-sm">{stat_value(@appearance.stats, "sho")}</div>
+                <div class="text-[8px] font-semibold text-[rgba(0,0,0,0.58)]">SHO</div>
               </div>
               <div>
-                <div class="font-extrabold text-sm">{stat_value(@appearance.stats, "pas")}</div>
-                <div class="opacity-60 text-[8px] font-bold">PAS</div>
+                <div class="font-bold text-sm">{stat_value(@appearance.stats, "pas")}</div>
+                <div class="text-[8px] font-semibold text-[rgba(0,0,0,0.58)]">PAS</div>
               </div>
               <div>
-                <div class="font-extrabold text-sm">{stat_value(@appearance.stats, "dri")}</div>
-                <div class="opacity-60 text-[8px] font-bold">DRI</div>
+                <div class="font-bold text-sm">{stat_value(@appearance.stats, "dri")}</div>
+                <div class="text-[8px] font-semibold text-[rgba(0,0,0,0.58)]">DRI</div>
               </div>
               <div>
-                <div class="font-extrabold text-sm">{stat_value(@appearance.stats, "def")}</div>
-                <div class="opacity-60 text-[8px] font-bold">DEF</div>
+                <div class="font-bold text-sm">{stat_value(@appearance.stats, "def")}</div>
+                <div class="text-[8px] font-semibold text-[rgba(0,0,0,0.58)]">DEF</div>
               </div>
               <div>
-                <div class="font-extrabold text-sm">{stat_value(@appearance.stats, "phy")}</div>
-                <div class="opacity-60 text-[8px] font-bold">PHY</div>
+                <div class="font-bold text-sm">{stat_value(@appearance.stats, "phy")}</div>
+                <div class="text-[8px] font-semibold text-[rgba(0,0,0,0.58)]">PHY</div>
               </div>
             <% end %>
           </div>
@@ -161,13 +173,13 @@ defmodule InvinciblesWeb.Components.PlayerCard do
         
     <!-- Cost / Badge overlay if present -->
         <%= if @cost do %>
-          <div class="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-slate-900 text-emerald-400 border border-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md z-10 whitespace-nowrap">
+          <div class="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#00754A] text-white border border-[#006241] text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md z-10 whitespace-nowrap">
             £{format_cost(@cost)}
           </div>
         <% end %>
 
         <%= if @selected_pos do %>
-          <div class="absolute -top-2 -right-2 bg-indigo-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full shadow border border-indigo-400 z-10">
+          <div class="absolute -top-2 -right-2 bg-[#00754A] text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full shadow border border-[#006241] z-10">
             {@selected_pos}
           </div>
         <% end %>
@@ -180,23 +192,26 @@ defmodule InvinciblesWeb.Components.PlayerCard do
     cond do
       ovr >= 90 ->
         %{
-          bg_color: "bg-[#d97706]",
-          text_color: "text-white",
-          border_color: "border border-[#b45309]"
+          bg_color: "bg-white",
+          text_color: "text-[rgba(0,0,0,0.87)]",
+          border_color: "border-[#006241] border-2",
+          ovr_color: "text-[#006241]"
         }
 
       ovr >= 83 ->
         %{
-          bg_color: "bg-[#facc15]",
-          text_color: "text-slate-950",
-          border_color: "border border-[#eab308]"
+          bg_color: "bg-white",
+          text_color: "text-[rgba(0,0,0,0.87)]",
+          border_color: "border-[#00754A]",
+          ovr_color: "text-[#00754A]"
         }
 
       true ->
         %{
-          bg_color: "bg-[#334155]",
-          text_color: "text-white",
-          border_color: "border border-[#1e293b]"
+          bg_color: "bg-white",
+          text_color: "text-[rgba(0,0,0,0.87)]",
+          border_color: "border-[rgba(0,0,0,0.12)]",
+          ovr_color: "text-[rgba(0,0,0,0.58)]"
         }
     end
   end
@@ -204,8 +219,8 @@ defmodule InvinciblesWeb.Components.PlayerCard do
   # Helper to retrieve "FirstInitial. LastName" from display name
   defp formatted_name(display_name) do
     case String.split(display_name, " ") do
-      [_single] ->
-        display_name
+      [single] ->
+        single
 
       [first | rest] ->
         initial = String.first(first)

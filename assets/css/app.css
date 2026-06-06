@@ -105,20 +105,171 @@
 /* This file is for your main application CSS */
 
 :root {
-  --colors-canvas: #000000;
-  --colors-surface-1: #111111;
-  --colors-surface-2: #1e1e1e;
-  --colors-surface-3: #2d2d2d;
-  --colors-hairline: rgba(178, 182, 189, 0.1);
-  --colors-ink: #ffffff;
-  --colors-ink-muted: #b2b6bd;
-  --colors-ink-subtle: #656a76;
+  /* Fonts */
+  --font-sans: 'Inter', sans-serif;
+  --font-serif: 'Lora', serif;
+  --font-script: 'Kalam', cursive;
   
-  --colors-product-terraform: #5c4ee5;
-  --colors-product-vault: #f3c63f;
-  --colors-product-waypoint: #00bcd4;
-  --colors-product-consul: #f44336;
-  --colors-product-nomad: #4caf50;
-  --colors-product-boundary: #ff7043;
+  /* Color Palette */
+  --colors-canvas: #f2f0eb;
+  --colors-surface-1: #ffffff;
+  --colors-surface-2: #edebe9;
+  --colors-surface-3: #f9f9f9;
+  --colors-hairline: rgba(0, 0, 0, 0.08);
+  --colors-ink: rgba(0, 0, 0, 0.87);
+  --colors-ink-muted: rgba(0, 0, 0, 0.58);
+  --colors-ink-subtle: rgba(0, 0, 0, 0.38);
+
+  --colors-brand-green: #006241;
+  --colors-accent-green: #00754A;
+  --colors-house-green: #1E3932;
+  --colors-uplift-green: #2b5148;
+  --colors-green-light: #d4e9e2;
+  
+  --colors-gold: #cba258;
+  --colors-gold-light: #dfc49d;
+  --colors-gold-lightest: #faf6ee;
+
+  --colors-text-black: rgba(0, 0, 0, 0.87);
+  --colors-text-black-soft: rgba(0, 0, 0, 0.58);
+  --colors-text-white: rgba(255, 255, 255, 1);
+  --colors-text-white-soft: rgba(255, 255, 255, 0.70);
+  --colors-rewards-green: #33433d;
+  --colors-error: #c82014;
+
+  /* Spacing */
+  --space-1: 0.4rem;
+  --space-2: 0.8rem;
+  --space-3: 1.6rem;
+  --space-4: 2.4rem;
+  --space-5: 3.2rem;
+  --space-6: 4.0rem;
+  --space-7: 4.8rem;
+  --space-8: 5.6rem;
+  --space-9: 6.4rem;
+  --outer-gutter: 1.6rem;
+}
+
+body {
+  background-color: var(--colors-canvas);
+  color: var(--colors-ink);
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+}
+
+/* Custom Starbucks UI components */
+.font-sans-starbucks {
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+}
+
+.font-serif-starbucks {
+  font-family: var(--font-serif);
+}
+
+.font-script-starbucks {
+  font-family: var(--font-script);
+}
+
+/* Starbucks style buttons */
+.btn-starbucks {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50px;
+  padding: 7px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.btn-starbucks:active {
+  transform: scale(0.95);
+}
+
+.btn-starbucks-filled {
+  background-color: var(--colors-accent-green);
+  color: #ffffff;
+  border-color: var(--colors-accent-green);
+}
+
+.btn-starbucks-filled:hover {
+  background-color: #006241;
+  border-color: #006241;
+}
+
+.btn-starbucks-outlined {
+  background-color: transparent;
+  color: var(--colors-accent-green);
+  border-color: var(--colors-accent-green);
+}
+
+.btn-starbucks-outlined:hover {
+  background-color: rgba(0, 117, 74, 0.06);
+}
+
+.btn-starbucks-black {
+  background-color: #000000;
+  color: #ffffff;
+  border-color: #000000;
+}
+
+.btn-starbucks-black:hover {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.btn-starbucks-white {
+  background-color: #ffffff;
+  color: var(--colors-accent-green);
+  border-color: #ffffff;
+}
+
+.btn-starbucks-white:hover {
+  background-color: var(--colors-surface-2);
+}
+
+.btn-starbucks-outlined-white {
+  background-color: transparent;
+  color: #ffffff;
+  border-color: #ffffff;
+}
+
+.btn-starbucks-outlined-white:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Content cards */
+.card-starbucks {
+  background-color: var(--colors-surface-1);
+  border-radius: 12px;
+  box-shadow: 0px 0px 0.5px 0px rgba(0,0,0,0.14), 0px 1px 1px 0px rgba(0,0,0,0.24);
+}
+
+/* Frap Floating Button */
+.btn-frap {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: var(--colors-accent-green);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  bottom: 1.6rem;
+  right: 1.6rem;
+  z-index: 100;
+  box-shadow: 0 0 6px rgba(0,0,0,0.24), 0 8px 12px rgba(0,0,0,0.14);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-frap:active {
+  transform: scale(0.95);
+  box-shadow: 0 0 6px rgba(0,0,0,0.12), 0 4px 6px rgba(0,0,0,0.07);
 }
 
