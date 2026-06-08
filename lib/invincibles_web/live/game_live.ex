@@ -585,27 +585,27 @@ defmodule InvinciblesWeb.GameLive do
 
                     <%!-- First loss callout --%>
                     <%= if first_loss do %>
-                      <div class="flex items-center gap-2 bg-[rgba(200,32,20,0.03)] border border-[rgba(200,32,20,0.15)] rounded-lg px-3 py-2 mb-4">
-                        <.icon name="hero-x-circle" class="w-4 h-4 text-[#c82014] shrink-0" />
-                        <div class="text-[11px] text-[#c82014] font-semibold leading-snug">
-                          First loss at Week {first_loss.week} — INVINCIBLES {first_loss.gf}–{first_loss.ga} {Map.get(
+                      <div class="text-xs text-[rgba(0,0,0,0.6)] font-semibold text-center mt-4 mb-2 flex items-center justify-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#c82014]"></span>
+                        <span>
+                          First loss at Week {first_loss.week} — {first_loss.gf}–{first_loss.ga} vs {Map.get(
                             first_loss,
                             :opponent_short,
                             "OPP"
                           )}
-                        </div>
+                        </span>
                       </div>
                     <% end %>
 
                     <%!-- Funny quote --%>
                     <div class={[
-                      "text-center text-[11px] leading-relaxed font-medium italic mt-2",
+                      "text-center text-sm sm:text-base leading-relaxed italic mt-3 px-4",
                       if(is_perfect,
-                        do: "text-[#7a5c1e]",
+                        do: "text-[#7a5c1e] font-semibold",
                         else:
                           if(is_invincible,
-                            do: "text-[#00563b]",
-                            else: "text-[rgba(0,0,0,0.58)]"
+                            do: "text-[#006241] font-semibold",
+                            else: "text-[rgba(0,0,0,0.78)] font-medium"
                           )
                       )
                     ]}>
@@ -614,10 +614,7 @@ defmodule InvinciblesWeb.GameLive do
                   </div>
 
                   <%!-- Footer actions --%>
-                  <div
-                    class="bg-[#f7f7f5] border border-[rgba(0,0,0,0.08)] rounded-b-xl px-6 py-4 flex items-center justify-between"
-                    data-html2canvas-ignore="true"
-                  >
+                  <div class="bg-[#f7f7f5] border border-[rgba(0,0,0,0.08)] rounded-b-xl px-6 py-4 flex items-center justify-between">
                     <span class="text-[10px] text-[rgba(0,0,0,0.4)]">
                       GA: {@season_record.ga} · Pts: {pts}
                     </span>
@@ -631,6 +628,7 @@ defmodule InvinciblesWeb.GameLive do
                       data-season={
                         if @sim_results, do: Map.get(@sim_results, :season_label, ""), else: ""
                       }
+                      data-quote={funny_quote}
                       class="btn-starbucks btn-starbucks-black text-xs flex items-center gap-2"
                     >
                       <svg class="w-4 h-4 fill-current text-white" viewBox="0 0 24 24">

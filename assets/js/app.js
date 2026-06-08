@@ -23,7 +23,6 @@ import "phoenix_html"
 import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/invincibles"
-import html2canvas from "html2canvas"
 import topbar from "../vendor/topbar"
 
 // A robust helper to convert oklch(...) to rgb(...)
@@ -331,174 +330,22 @@ const Hooks = {
   ShareButton: {
     mounted() {
       this.el.addEventListener("click", () => {
-        const pitchEl = document.getElementById("game-pitch-container");
-        if (!pitchEl) return;
+        const wins = this.el.dataset.wins || "0";
+        const draws = this.el.dataset.draws || "0";
+        const losses = this.el.dataset.losses || "0";
+        const points = this.el.dataset.points || "0";
+        const season = this.el.dataset.season ? ` (${this.el.dataset.season})` : "";
+        const quote = this.el.dataset.quote || "";
 
-        // Intercept getComputedStyle to bypass oklch/oklab failures in html2canvas
-        const originalGetComputedStyle = window.getComputedStyle;
-         const oklchToRgbLocal = (oklchStr) => {
-          const match = oklchStr.match(/oklch\(([-.\d%.]+)\s+([-.\d%.]+)\s+([-.\d%.]+)(?:\s*\/\s*([-.\d%.]+))?\)/) ||
-                        oklchStr.match(/oklch\(([-.\d%.]+),\s*([-.\d%.]+),\s*([-.\d%.]+)(?:,\s*([-.\d%.]+))?\)/);
-          if (!match) return oklchStr;
-          let l = parseFloat(match[1]);
-          let c = parseFloat(match[2]);
-          let h = parseFloat(match[3]);
-          let a = match[4] !== undefined ? parseFloat(match[4]) : 1;
-          if (match[1].includes('%')) l /= 100;
-          if (match[2].includes('%')) c /= 100;
-          const hRad = (h * Math.PI) / 180;
-          const a_lab = c * Math.cos(hRad);
-          const b_lab = c * Math.sin(hRad);
-          const l_lms = l + 0.3963377774 * a_lab + 0.2158037573 * b_lab;
-          const m_lms = l - 0.1055613458 * a_lab - 0.0638541728 * b_lab;
-          const s_lms = l - 0.0894841775 * a_lab - 1.2914855480 * b_lab;
-          const l3 = l_lms * l_lms * l_lms;
-          const m3 = m_lms * m_lms * m_lms;
-          const s3 = s_lms * s_lms * s_lms;
-          const r_linear = +4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3;
-          const g_linear = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3;
-          const b_linear = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.7076147010 * s3;
-          const toSRGB = (c_lin) => {
-            const clamped = Math.max(0, Math.min(1, c_lin));
-            return clamped <= 0.0031308
-              ? 12.92 * clamped
-              : 1.055 * Math.pow(clamped, 1 / 2.4) - 0.055;
-          };
-          const r = Math.round(toSRGB(r_linear) * 255);
-          const g = Math.round(toSRGB(g_linear) * 255);
-          const b = Math.round(toSRGB(b_linear) * 255);
-          return a < 1 ? `rgba(${r}, ${g}, ${b}, ${a})` : `rgb(${r}, ${g}, ${b})`;
-        };
+        let text = `Can you build a squad and go 38-0-0? Check out my Invincibles campaign!\n\nRecord: ${wins}W - ${draws}D - ${losses}L | ${points} Pts${season} ⚽🏆`;
+        if (quote) {
+          text += `\n\n"${quote}"`;
+        }
+        text += `\n\n#InvinciblesDraft`;
 
-        const oklabToRgbLocal = (oklabStr) => {
-          const match = oklabStr.match(/oklab\(([-.\d%.]+)\s+([-.\d%.]+)\s+([-.\d%.]+)(?:\s*\/\s*([-.\d%.]+))?\)/) ||
-                        oklabStr.match(/oklab\(([-.\d%.]+),\s*([-.\d%.]+),\s*([-.\d%.]+)(?:,\s*([-.\d%.]+))?\)/);
-          if (!match) return oklabStr;
-          let l = parseFloat(match[1]);
-          let a_lab = parseFloat(match[2]);
-          let b_lab = parseFloat(match[3]);
-          let a = match[4] !== undefined ? parseFloat(match[4]) : 1;
-          if (match[1].includes('%')) l /= 100;
-          if (match[2].includes('%')) a_lab /= 100;
-          if (match[3].includes('%')) b_lab /= 100;
-          const l_lms = l + 0.3963377774 * a_lab + 0.2158037573 * b_lab;
-          const m_lms = l - 0.1055613458 * a_lab - 0.0638541728 * b_lab;
-          const s_lms = l - 0.0894841775 * a_lab - 1.2914855480 * b_lab;
-          const l3 = l_lms * l_lms * l_lms;
-          const m3 = m_lms * m_lms * m_lms;
-          const s3 = s_lms * s_lms * s_lms;
-          const r_linear = +4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3;
-          const g_linear = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3;
-          const b_linear = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.7076147010 * s3;
-          const toSRGB = (c_lin) => {
-            const clamped = Math.max(0, Math.min(1, c_lin));
-            return clamped <= 0.0031308
-              ? 12.92 * clamped
-              : 1.055 * Math.pow(clamped, 1 / 2.4) - 0.055;
-          };
-          const r = Math.round(toSRGB(r_linear) * 255);
-          const g = Math.round(toSRGB(g_linear) * 255);
-          const b = Math.round(toSRGB(b_linear) * 255);
-          return a < 1 ? `rgba(${r}, ${g}, ${b}, ${a})` : `rgb(${r}, ${g}, ${b})`;
-        };
-
-        const convertCSSColors = (str) => {
-          if (typeof str !== "string") return str;
-          
-          // Match oklch/oklab with signed floats/percentages and spaces/slashes
-          let out = str.replace(/oklch\(([^)]+)\)/g, (m) => oklchToRgbLocal(m));
-          out = out.replace(/oklab\(([^)]+)\)/g, (m) => oklabToRgbLocal(m));
-          return out;
-        };
-
-        window.getComputedStyle = function(el, pseudo) {
-          const style = originalGetComputedStyle(el, pseudo);
-          return new Proxy(style, {
-            get(target, prop) {
-              const val = target[prop];
-              if (typeof val === "string") {
-                return convertCSSColors(val);
-              }
-              if (prop === "getPropertyValue") {
-                return function(propertyName) {
-                  const originalVal = target.getPropertyValue(propertyName);
-                  return convertCSSColors(originalVal);
-                };
-              }
-              if (typeof val === "function") {
-                return val.bind(target);
-              }
-              return val;
-            }
-          });
-        };
-
-        // Capture Pitch
-        html2canvas(pitchEl, {
-          backgroundColor: "#000000",
-          scale: 2,
-          useCORS: true,
-          logging: false
-        }).then(pitchCanvas => {
-          // Capture Standings / Results Table
-          const tableCard = document.getElementById("standings-table-card");
-          if (!tableCard) {
-            window.getComputedStyle = originalGetComputedStyle;
-            return;
-          }
-          
-          html2canvas(tableCard, {
-            backgroundColor: "#111111",
-            scale: 2,
-            useCORS: true,
-            logging: false
-          }).then(detailsCanvas => {
-            // Restore original getComputedStyle
-            window.getComputedStyle = originalGetComputedStyle;
-
-            // Combine both canvas renderings into a single master canvas (stacked vertically)
-            const combinedCanvas = document.createElement("canvas");
-            const ctx = combinedCanvas.getContext("2d");
-
-            // Calculate spacing and layout size
-            const gap = 30;
-            combinedCanvas.width = Math.max(pitchCanvas.width, detailsCanvas.width);
-            combinedCanvas.height = pitchCanvas.height + detailsCanvas.height + gap;
-
-            // Fill canvas background
-            ctx.fillStyle = "#0a0a0a";
-            ctx.fillRect(0, 0, combinedCanvas.width, combinedCanvas.height);
-
-            // Draw Pitch
-            const pitchX = (combinedCanvas.width - pitchCanvas.width) / 2;
-            ctx.drawImage(pitchCanvas, pitchX, 0);
-
-            // Draw Standings / Details Card below the pitch
-            const detailsX = (combinedCanvas.width - detailsCanvas.width) / 2;
-            ctx.drawImage(detailsCanvas, detailsX, pitchCanvas.height + gap);
-
-            // Trigger single combined download
-            triggerDownload(combinedCanvas, "invincibles-campaign.png");
-
-            // Extract record parameters
-            const wins = this.el.dataset.wins || "0";
-            const draws = this.el.dataset.draws || "0";
-            const losses = this.el.dataset.losses || "0";
-            const points = this.el.dataset.points || "0";
-            const season = this.el.dataset.season ? ` (${this.el.dataset.season})` : "";
-
-            // Open Twitter share compose intent
-            const tweetText = encodeURIComponent(`Can you build a squad and go 38-0-0? Check out my Invincibles lineup and season standings table!\n\nRecord: ${wins}W - ${draws}D - ${losses}L | ${points} Pts${season} ⚽🏆\n\n#InvinciblesDraft\n\n(Attach the downloaded invincibles-campaign.png from your downloads folder!)`);
-            const twitterUrl = `https://twitter.com/intent/tweet?text=${tweetText}`;
-            window.open(twitterUrl, "_blank");
-          }).catch(err => {
-            console.error("Standings capture failed:", err);
-            window.getComputedStyle = originalGetComputedStyle;
-          });
-        }).catch(err => {
-          console.error("Pitch capture failed:", err);
-          window.getComputedStyle = originalGetComputedStyle;
-        });
+        const tweetText = encodeURIComponent(text);
+        const twitterUrl = `https://twitter.com/intent/tweet?text=${tweetText}`;
+        window.open(twitterUrl, "_blank");
       });
     }
   },
@@ -616,11 +463,6 @@ if (process.env.NODE_ENV === "development") {
   })
 }
 
-function triggerDownload(canvas, filename) {
-  const link = document.createElement("a");
-  link.download = filename || "invincibles-squad.png";
-  link.href = canvas.toDataURL("image/png");
-  link.click();
-}
+
 
 
