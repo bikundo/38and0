@@ -1,6 +1,5 @@
 defmodule InvinciblesWeb.GameLive do
   use InvinciblesWeb, :live_view
-  import InvinciblesWeb.Components.PlayerCard
   alias Invincibles.Game
   alias Invincibles.Game.SimEngine
 
@@ -29,6 +28,26 @@ defmodule InvinciblesWeb.GameLive do
     st: "ST",
     st1: "ST",
     st2: "ST"
+  }
+
+  @position_descriptions %{
+    gk: "Goalkeeper",
+    lb: "Left",
+    cb1: "Centre",
+    cb2: "Centre",
+    cb3: "Centre",
+    rb: "Right",
+    lm: "Left",
+    cm: "Attacking",
+    cm1: "Defensive",
+    cm2: "Defensive",
+    cm3: "Centre",
+    rm: "Right",
+    lw: "Left",
+    rw: "Right",
+    st: "Striker",
+    st1: "Striker",
+    st2: "Striker"
   }
 
   @formation_layouts %{
@@ -86,6 +105,7 @@ defmodule InvinciblesWeb.GameLive do
     |> assign(:sim_results, nil)
     |> assign(:simulating_week, nil)
     |> assign(:position_names, @position_names)
+    |> assign(:position_descriptions, @position_descriptions)
   end
 
   @impl true
@@ -284,12 +304,48 @@ defmodule InvinciblesWeb.GameLive do
     end)
   end
 
-  # Helper to determine card and slot classes based on how many players are in a row
-  defp row_classes(count) do
+  defp truncate_name(name) do
+    case String.split(name, " ") do
+      [single] -> single
+      parts -> List.last(parts)
+    end
+  end
+
+  defp get_funny_quote(record) do
+    points = record.wins * 3 + record.draws
+    losses = record.losses
+    ga = record.ga
+
     cond do
-      count >= 5 -> {"!w-20 !h-32 !p-1.5 !rounded-lg", "w-20 h-32 text-xs", "w-7 h-7 text-[10px]"}
-      count == 4 -> {"!w-24 !h-36 !p-2 !rounded-lg", "w-24 h-36 text-xs", "w-8 h-8 text-xs"}
-      true -> {"!w-28 !h-40 !p-2.5 !rounded-lg", "w-28 h-40 text-sm", "w-10 h-10 text-sm"}
+      record.wins == 38 ->
+        "A perfect 38-0-0! Pep Guardiola is calling for your tactical blueprint. Absolutely insane."
+
+      losses == 0 ->
+        "Unbeaten! You matched the legendary Arsenal 2003/04 Invincibles. Arsene Wenger has a tear in his eye."
+
+      points >= 100 ->
+        "#{points} points! You matched the Man City 2017/18 'Centurions' record. Truly elite."
+
+      points >= 90 ->
+        "#{points} points! You matched the elite standard of Chelsea 2005/06 or Man City 2018/19 champions."
+
+      ga <= 15 and record.week >= 38 ->
+        "Only #{ga} goals conceded! Jose Mourinho is nodding in approval. You matched Chelsea's 2004/05 defensive masterclass."
+
+      points <= 20 and record.week >= 38 ->
+        "#{points} points. You're dangerously close to matching Derby County's 2007/08 record of 11 points!"
+
+      true ->
+        cond do
+          rem(points, 3) == 0 ->
+            "You matched City 2021's record of winter dominance, but can you do it on a cold rainy night in Stoke?"
+
+          rem(points, 3) == 1 ->
+            "Solid campaign, but Sam Allardyce is confident he could have kept this team up with 10 matches to spare."
+
+          true ->
+            "Your squad played some beautiful football, but did it have the grit of Sean Dyche's Burnley?"
+        end
     end
   end
 
@@ -305,7 +361,7 @@ defmodule InvinciblesWeb.GameLive do
           class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start w-full"
         >
           <!-- Left 8 columns: Game Board & Lineup Pitch -->
-          <div class="lg:col-span-8 flex flex-col gap-6">
+          <div class="order-2 lg:order-1 lg:col-span-8 flex flex-col gap-6">
             <!-- Share Capture Area enclosing Pitch + Record Details below it -->
             <div id="share-capture-area" class="bg-[#f2f0eb] flex flex-col gap-4">
               <!-- Soccer Pitch Lineup View -->
@@ -329,34 +385,27 @@ defmodule InvinciblesWeb.GameLive do
                 <% layout = Map.fetch!(@formation_layouts, @formation) %>
                 
     <!-- Attacking Line -->
-                <% {fwd_card, fwd_slot, fwd_circ} = row_classes(length(layout.fwd)) %>
                 <div class="flex justify-around items-center gap-2 z-10 mt-2">
                   <%= for pos <- layout.fwd do %>
-                    <div class="flex flex-col items-center">
+                    <div
+                      data-position-key={pos}
+                      class="pitch-slot flex flex-col items-center justify-center transition-all duration-200"
+                    >
                       <%= if card = @lineup[pos] do %>
-                        <.player_card
-                          appearance={card}
-                          selected_pos={@position_names[pos]}
-                          simple={true}
-                          class={fwd_card}
-                        />
+                        <!-- Occupied Circle -->
+                        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#f43f5e] border-2 border-white/20 flex items-center justify-center text-white font-extrabold text-sm sm:text-base shadow-lg cursor-grab active:cursor-grabbing hover:scale-105 transition-all">
+                          {@position_names[pos]}
+                        </div>
+                        <div class="mt-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-white text-[10px] sm:text-xs font-semibold shadow text-center whitespace-nowrap">
+                          {truncate_name(card.player.display_name)}
+                        </div>
                       <% else %>
-                        <div
-                          data-position-key={pos}
-                          class={[
-                            "pitch-slot rounded-xl border border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex flex-col items-center justify-center text-white/80 gap-1.5 shadow-inner transition-all duration-200",
-                            fwd_slot
-                          ]}
-                        >
-                          <div class={[
-                            "rounded-full border border-white/30 flex items-center justify-center text-white/80 bg-white/5 font-extrabold",
-                            fwd_circ
-                          ]}>
-                            {@position_names[pos]}
-                          </div>
-                          <span class="text-[9px] font-black tracking-wider uppercase opacity-80">
-                            DROP ZONE
-                          </span>
+                        <!-- Empty Circle -->
+                        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/80 font-extrabold text-sm sm:text-base">
+                          {@position_names[pos]}
+                        </div>
+                        <div class="mt-2 px-3 py-0.5 bg-black/40 backdrop-blur-sm rounded-full text-white/80 text-[10px] sm:text-xs font-semibold tracking-wide">
+                          {@position_descriptions[pos]}
                         </div>
                       <% end %>
                     </div>
@@ -364,34 +413,27 @@ defmodule InvinciblesWeb.GameLive do
                 </div>
                 
     <!-- Midfield Line -->
-                <% {mid_card, mid_slot, mid_circ} = row_classes(length(layout.mid)) %>
                 <div class="flex justify-around items-center gap-2 z-10 my-4">
                   <%= for pos <- layout.mid do %>
-                    <div class="flex flex-col items-center">
+                    <div
+                      data-position-key={pos}
+                      class="pitch-slot flex flex-col items-center justify-center transition-all duration-200"
+                    >
                       <%= if card = @lineup[pos] do %>
-                        <.player_card
-                          appearance={card}
-                          selected_pos={@position_names[pos]}
-                          simple={true}
-                          class={mid_card}
-                        />
+                        <!-- Occupied Circle -->
+                        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#f43f5e] border-2 border-white/20 flex items-center justify-center text-white font-extrabold text-sm sm:text-base shadow-lg cursor-grab active:cursor-grabbing hover:scale-105 transition-all">
+                          {@position_names[pos]}
+                        </div>
+                        <div class="mt-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-white text-[10px] sm:text-xs font-semibold shadow text-center whitespace-nowrap">
+                          {truncate_name(card.player.display_name)}
+                        </div>
                       <% else %>
-                        <div
-                          data-position-key={pos}
-                          class={[
-                            "pitch-slot rounded-xl border border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex flex-col items-center justify-center text-white/80 gap-1.5 shadow-inner transition-all duration-200",
-                            mid_slot
-                          ]}
-                        >
-                          <div class={[
-                            "rounded-full border border-white/30 flex items-center justify-center text-white/80 bg-white/5 font-extrabold",
-                            mid_circ
-                          ]}>
-                            {@position_names[pos]}
-                          </div>
-                          <span class="text-[9px] font-black tracking-wider uppercase opacity-80">
-                            DROP ZONE
-                          </span>
+                        <!-- Empty Circle -->
+                        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/80 font-extrabold text-sm sm:text-base">
+                          {@position_names[pos]}
+                        </div>
+                        <div class="mt-2 px-3 py-0.5 bg-black/40 backdrop-blur-sm rounded-full text-white/80 text-[10px] sm:text-xs font-semibold tracking-wide">
+                          {@position_descriptions[pos]}
                         </div>
                       <% end %>
                     </div>
@@ -399,34 +441,27 @@ defmodule InvinciblesWeb.GameLive do
                 </div>
                 
     <!-- Defensive Line -->
-                <% {def_card, def_slot, def_circ} = row_classes(length(layout.def)) %>
                 <div class="flex justify-around items-center gap-2 z-10">
                   <%= for pos <- layout.def do %>
-                    <div class="flex flex-col items-center">
+                    <div
+                      data-position-key={pos}
+                      class="pitch-slot flex flex-col items-center justify-center transition-all duration-200"
+                    >
                       <%= if card = @lineup[pos] do %>
-                        <.player_card
-                          appearance={card}
-                          selected_pos={@position_names[pos]}
-                          simple={true}
-                          class={def_card}
-                        />
+                        <!-- Occupied Circle -->
+                        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#f43f5e] border-2 border-white/20 flex items-center justify-center text-white font-extrabold text-sm sm:text-base shadow-lg cursor-grab active:cursor-grabbing hover:scale-105 transition-all">
+                          {@position_names[pos]}
+                        </div>
+                        <div class="mt-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-white text-[10px] sm:text-xs font-semibold shadow text-center whitespace-nowrap">
+                          {truncate_name(card.player.display_name)}
+                        </div>
                       <% else %>
-                        <div
-                          data-position-key={pos}
-                          class={[
-                            "pitch-slot rounded-xl border border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex flex-col items-center justify-center text-white/80 gap-1 shadow-inner transition-all duration-200",
-                            def_slot
-                          ]}
-                        >
-                          <div class={[
-                            "rounded-full border border-white/30 flex items-center justify-center text-white/80 bg-white/5 font-extrabold",
-                            def_circ
-                          ]}>
-                            {@position_names[pos]}
-                          </div>
-                          <span class="text-[8px] font-black tracking-wider uppercase opacity-80">
-                            DROP ZONE
-                          </span>
+                        <!-- Empty Circle -->
+                        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/80 font-extrabold text-sm sm:text-base">
+                          {@position_names[pos]}
+                        </div>
+                        <div class="mt-2 px-3 py-0.5 bg-black/40 backdrop-blur-sm rounded-full text-white/80 text-[10px] sm:text-xs font-semibold tracking-wide">
+                          {@position_descriptions[pos]}
                         </div>
                       <% end %>
                     </div>
@@ -435,25 +470,25 @@ defmodule InvinciblesWeb.GameLive do
                 
     <!-- Goalkeeper (GK) -->
                 <div class="flex justify-center items-center z-10 mb-2">
-                  <div class="flex flex-col items-center">
+                  <div
+                    data-position-key="gk"
+                    class="pitch-slot flex flex-col items-center justify-center transition-all duration-200"
+                  >
                     <%= if card = @lineup[:gk] do %>
-                      <.player_card
-                        appearance={card}
-                        selected_pos={@position_names[:gk]}
-                        simple={true}
-                        class="!w-28 !h-40 !p-2.5 !rounded-lg"
-                      />
+                      <!-- Occupied Circle -->
+                      <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#f43f5e] border-2 border-white/20 flex items-center justify-center text-white font-extrabold text-sm sm:text-base shadow-lg cursor-grab active:cursor-grabbing hover:scale-105 transition-all">
+                        {@position_names[:gk]}
+                      </div>
+                      <div class="mt-2 px-3 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-white text-[10px] sm:text-xs font-semibold max-w-[80px] sm:max-w-[100px] truncate shadow">
+                        {truncate_name(card.player.display_name)}
+                      </div>
                     <% else %>
-                      <div
-                        data-position-key="gk"
-                        class="pitch-slot w-28 h-40 rounded-xl border border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex flex-col items-center justify-center text-white/80 gap-1.5 shadow-inner transition-all duration-200"
-                      >
-                        <div class="w-10 h-10 rounded-full border border-white/30 flex items-center justify-center text-white/80 bg-white/5 font-extrabold text-sm">
-                          {@position_names[:gk]}
-                        </div>
-                        <span class="text-[9px] font-black tracking-wider uppercase opacity-80">
-                          DROP ZONE
-                        </span>
+                      <!-- Empty Circle -->
+                      <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/80 font-extrabold text-sm sm:text-base">
+                        {@position_names[:gk]}
+                      </div>
+                      <div class="mt-2 px-3 py-0.5 bg-black/40 backdrop-blur-sm rounded-full text-white/80 text-[10px] sm:text-xs font-semibold tracking-wide">
+                        {@position_descriptions[:gk]}
                       </div>
                     <% end %>
                   </div>
@@ -462,53 +497,141 @@ defmodule InvinciblesWeb.GameLive do
               <!-- End share-capture-area -->
 
               <%= if @step in [:game_over, :hall_of_fame] do %>
-                <div
-                  id="standings-table-card"
-                  class="card-starbucks p-6 flex flex-col md:flex-row md:items-center justify-between gap-6"
-                >
-                  <div>
-                    <span class="text-[10px] font-semibold text-[#006241] uppercase tracking-[0.6px]">
-                      {if @step == :hall_of_fame, do: "Golden Campaign", else: "Final Season Record"}
-                      <%= if @sim_results && Map.get(@sim_results, :season_label) do %>
-                        ({@sim_results.season_label})
-                      <% end %>
-                    </span>
-                    <div class="flex items-baseline gap-3 mt-1.5">
-                      <span class="text-xl font-bold text-[rgba(0,0,0,0.87)]">
-                        {@season_record.wins}W - {@season_record.draws}D - {@season_record.losses}L
-                      </span>
-                      <span class="text-sm font-semibold text-[#00754A]">
-                        {@season_record.wins * 3 + @season_record.draws} Points
-                      </span>
-                    </div>
-                    <div class="text-[11px] text-[rgba(0,0,0,0.58)] mt-1">
-                      GF: {@season_record.gf} | GA: {@season_record.ga} | GD: {if @season_record.gf -
-                                                                                    @season_record.ga >=
-                                                                                    0,
-                                                                                  do: "+",
-                                                                                  else: ""}{@season_record.gf -
-                        @season_record.ga}
-                    </div>
-                    <% first_loss = Enum.find(@sim_results.matches, &(&1.result == :loss)) %>
-                    <%= if first_loss do %>
-                      <div class="text-[11px] text-[#c82014] mt-2 font-semibold">
-                        First Loss: Week {first_loss.week} (INVINCIBLES {first_loss.gf} - {first_loss.ga} {Map.get(
-                          first_loss,
-                          :opponent_short,
-                          "OPPONENT"
-                        )})
+                <% pts = @season_record.wins * 3 + @season_record.draws
+                gd = @season_record.gf - @season_record.ga
+                gd_str = if gd >= 0, do: "+#{gd}", else: "#{gd}"
+                is_invincible = @season_record.losses == 0
+                is_perfect = @season_record.wins == 38
+                funny_quote = get_funny_quote(@season_record)
+                first_loss = Enum.find(@sim_results.matches, &(&1.result == :loss)) %>
+                <div id="standings-table-card">
+                  <%!-- Header banner --%>
+                  <div class={[
+                    "rounded-t-xl px-6 py-4 flex items-center justify-between",
+                    if(is_perfect,
+                      do: "bg-gradient-to-r from-[#cba258] to-[#f0d47c]",
+                      else:
+                        if(is_invincible,
+                          do: "bg-gradient-to-r from-[#006241] to-[#00754A]",
+                          else: "bg-gradient-to-r from-[#1a1a1a] to-[#333]"
+                        )
+                    )
+                  ]}>
+                    <div>
+                      <div class="text-[10px] font-bold uppercase tracking-[1.2px] text-white/70 mb-0.5">
+                        {if @step == :hall_of_fame, do: "Golden Campaign", else: "Season Complete"}
+                        <%= if @sim_results && Map.get(@sim_results, :season_label) do %>
+                          · {@sim_results.season_label}
+                        <% end %>
                       </div>
-                    <% end %>
+                      <div class="text-white font-black text-2xl tracking-tight leading-none">
+                        {if is_perfect,
+                          do: "PERFECT SEASON",
+                          else: if(is_invincible, do: "INVINCIBLES", else: "FINAL RECORD")}
+                      </div>
+                    </div>
+                    <div class="text-right">
+                      <div class="text-white/60 text-[10px] uppercase tracking-wider">Points</div>
+                      <div class="text-white font-black text-3xl leading-none">{pts}</div>
+                    </div>
                   </div>
 
-                  <div data-html2canvas-ignore="true">
+                  <%!-- Stats pillars --%>
+                  <div class="bg-white border-x border-[rgba(0,0,0,0.08)] px-6 py-5">
+                    <div class="grid grid-cols-5 gap-2 text-center mb-5">
+                      <div class="flex flex-col gap-1">
+                        <span class="text-[22px] font-black text-[#006241] leading-none">
+                          {@season_record.wins}
+                        </span>
+                        <span class="text-[9px] font-bold uppercase tracking-wider text-[rgba(0,0,0,0.4)]">
+                          Won
+                        </span>
+                      </div>
+                      <div class="flex flex-col gap-1">
+                        <span class="text-[22px] font-black text-[rgba(0,0,0,0.5)] leading-none">
+                          {@season_record.draws}
+                        </span>
+                        <span class="text-[9px] font-bold uppercase tracking-wider text-[rgba(0,0,0,0.4)]">
+                          Drawn
+                        </span>
+                      </div>
+                      <div class="flex flex-col gap-1">
+                        <span class={[
+                          "text-[22px] font-black leading-none",
+                          if(@season_record.losses == 0, do: "text-[#006241]", else: "text-[#c82014]")
+                        ]}>
+                          {@season_record.losses}
+                        </span>
+                        <span class="text-[9px] font-bold uppercase tracking-wider text-[rgba(0,0,0,0.4)]">
+                          Lost
+                        </span>
+                      </div>
+                      <div class="flex flex-col gap-1">
+                        <span class="text-[22px] font-black text-[rgba(0,0,0,0.75)] leading-none">
+                          {@season_record.gf}
+                        </span>
+                        <span class="text-[9px] font-bold uppercase tracking-wider text-[rgba(0,0,0,0.4)]">
+                          GF
+                        </span>
+                      </div>
+                      <div class="flex flex-col gap-1">
+                        <span class={[
+                          "text-[22px] font-black leading-none",
+                          if(gd >= 0, do: "text-[#006241]", else: "text-[#c82014]")
+                        ]}>
+                          {gd_str}
+                        </span>
+                        <span class="text-[9px] font-bold uppercase tracking-wider text-[rgba(0,0,0,0.4)]">
+                          GD
+                        </span>
+                      </div>
+                    </div>
+
+                    <%!-- First loss callout --%>
+                    <%= if first_loss do %>
+                      <div class="flex items-center gap-2 bg-[#fff5f5] border border-[#fde8e8] rounded-lg px-3 py-2 mb-4">
+                        <.icon name="hero-x-circle" class="w-4 h-4 text-[#c82014] shrink-0" />
+                        <div class="text-[11px] text-[#c82014] font-semibold leading-snug">
+                          First loss at Week {first_loss.week} — INVINCIBLES {first_loss.gf}–{first_loss.ga} {Map.get(
+                            first_loss,
+                            :opponent_short,
+                            "OPP"
+                          )}
+                        </div>
+                      </div>
+                    <% end %>
+
+                    <%!-- Funny quote --%>
+                    <div class={[
+                      "rounded-lg px-4 py-3 text-[11px] leading-relaxed font-medium italic border-l-4",
+                      if(is_perfect,
+                        do: "bg-[#faf6ee] border-[#cba258] text-[#7a5c1e]",
+                        else:
+                          if(is_invincible,
+                            do: "bg-[#f0faf5] border-[#00754A] text-[#00563b]",
+                            else: "bg-[#f5f5f5] border-[rgba(0,0,0,0.2)] text-[rgba(0,0,0,0.58)]"
+                          )
+                      )
+                    ]}>
+                      "{funny_quote}"
+                    </div>
+                  </div>
+
+                  <%!-- Footer actions --%>
+                  <div
+                    class="bg-[#f7f7f5] border border-[rgba(0,0,0,0.08)] rounded-b-xl px-6 py-4 flex items-center justify-between"
+                    data-html2canvas-ignore="true"
+                  >
+                    <span class="text-[10px] text-[rgba(0,0,0,0.4)]">
+                      GA: {@season_record.ga} · Pts: {pts}
+                    </span>
                     <button
                       id="share-btn"
                       phx-hook="ShareButton"
                       data-wins={@season_record.wins}
                       data-draws={@season_record.draws}
                       data-losses={@season_record.losses}
-                      data-points={@season_record.wins * 3 + @season_record.draws}
+                      data-points={pts}
                       data-season={
                         if @sim_results, do: Map.get(@sim_results, :season_label, ""), else: ""
                       }
@@ -527,14 +650,14 @@ defmodule InvinciblesWeb.GameLive do
           <!-- End lg:col-span-8 -->
           
           <!-- Right 4 columns: Game Controllers / Draft pool -->
-          <div class="lg:col-span-4 flex flex-col gap-6">
+          <div class="order-1 lg:order-2 lg:col-span-4 flex flex-col gap-6">
             
     <!-- Game State Controller card -->
             <div class="card-starbucks p-6 flex flex-col gap-6">
               <%= if @step == :not_started do %>
                 <div class="text-center py-6">
-                  <div class="w-12 h-12 mx-auto bg-[#edebe9] border border-[rgba(0,0,0,0.08)] rounded-[12px] flex items-center justify-center text-xl mb-4">
-                    🏆
+                  <div class="w-12 h-12 mx-auto bg-[#edebe9] border border-[rgba(0,0,0,0.08)] rounded-[12px] flex items-center justify-center mb-4">
+                    <.icon name="hero-trophy" class="w-6 h-6 text-[#00754A]" />
                   </div>
                   <h2 class="text-lg font-bold tracking-tight mb-2 text-[#006241]">
                     Can you build an Invincible squad?
@@ -588,8 +711,8 @@ defmodule InvinciblesWeb.GameLive do
 
               <%= if @step == :spinning do %>
                 <div class="text-center py-6">
-                  <div class="w-12 h-12 mx-auto bg-[#faf6ee] border border-[#dfc49d] rounded-[12px] flex items-center justify-center text-xl text-[#cba258] mb-4">
-                    ⏳
+                  <div class="w-12 h-12 mx-auto bg-[#faf6ee] border border-[#dfc49d] rounded-[12px] flex items-center justify-center mb-4">
+                    <.icon name="hero-arrow-path" class="w-6 h-6 text-[#cba258]" />
                   </div>
                   <h2 class="text-lg font-bold tracking-tight mb-2 text-[#006241]">
                     Spin for your Constraints
@@ -899,8 +1022,8 @@ defmodule InvinciblesWeb.GameLive do
 
               <%= if @step == :hall_of_fame do %>
                 <div class="text-center py-6">
-                  <div class="w-12 h-12 mx-auto bg-[#faf6ee] border border-[#dfc49d] rounded-[12px] flex items-center justify-center text-xl mb-4">
-                    👑
+                  <div class="w-12 h-12 mx-auto bg-[#faf6ee] border border-[#dfc49d] rounded-[12px] flex items-center justify-center mb-4">
+                    <.icon name="hero-star" class="w-6 h-6 text-[#cba258]" />
                   </div>
                   <h2 class="text-xl font-bold tracking-tight mb-2 text-[#cba258]">
                     {if @season_record.wins == 38, do: "GOLDEN TROPHY", else: "THE UNBEATEN"}
@@ -922,82 +1045,6 @@ defmodule InvinciblesWeb.GameLive do
                 </div>
               <% end %>
             </div>
-            
-    <!-- Squad Stats / Summary Panel -->
-            <%= if @step != :not_started and @step != :spinning do %>
-              <% strengths = SimEngine.calculate_strengths(@lineup) %>
-              <div class="card-starbucks p-6 flex flex-col gap-4">
-                <h3 class="text-[11px] font-semibold text-[rgba(0,0,0,0.58)] uppercase tracking-[0.6px] border-b border-[rgba(0,0,0,0.08)] pb-2.5">
-                  Lineup Strengths
-                </h3>
-
-                <div class="flex flex-col gap-3">
-                  <div>
-                    <div class="flex justify-between items-center text-xs mb-1.5">
-                      <span class="text-[rgba(0,0,0,0.58)]">Attack Strength</span>
-                      <span class="font-bold text-[rgba(0,0,0,0.87)]">
-                        {Float.round(strengths.attack, 1)}
-                      </span>
-                    </div>
-                    <div class="w-full bg-[#edebe9] rounded-full h-1 overflow-hidden">
-                      <div
-                        class="bg-[#00754A] h-1 rounded-full"
-                        style={"width: #{min(strengths.attack / 450 * 100, 100)}%"}
-                      >
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div class="flex justify-between items-center text-xs mb-1.5">
-                      <span class="text-[rgba(0,0,0,0.58)]">Control Strength</span>
-                      <span class="font-bold text-[rgba(0,0,0,0.87)]">
-                        {Float.round(strengths.control, 1)}
-                      </span>
-                    </div>
-                    <div class="w-full bg-[#edebe9] rounded-full h-1 overflow-hidden">
-                      <div
-                        class="bg-[#00754A] h-1 rounded-full"
-                        style={"width: #{min(strengths.control / 650 * 100, 100)}%"}
-                      >
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div class="flex justify-between items-center text-xs mb-1.5">
-                      <span class="text-[rgba(0,0,0,0.58)]">Defensive Strength</span>
-                      <span class="font-bold text-[rgba(0,0,0,0.87)]">
-                        {Float.round(strengths.defense, 1)}
-                      </span>
-                    </div>
-                    <div class="w-full bg-[#edebe9] rounded-full h-1 overflow-hidden">
-                      <div
-                        class="bg-[#00754A] h-1 rounded-full"
-                        style={"width: #{min(strengths.defense / 850 * 100, 100)}%"}
-                      >
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div class="flex justify-between items-center text-xs mb-1.5">
-                      <span class="text-[rgba(0,0,0,0.58)]">Goalkeeping Strength</span>
-                      <span class="font-bold text-[rgba(0,0,0,0.87)]">
-                        {Float.round(strengths.gk, 1)}
-                      </span>
-                    </div>
-                    <div class="w-full bg-[#edebe9] rounded-full h-1 overflow-hidden">
-                      <div
-                        class="bg-[#00754A] h-1 rounded-full"
-                        style={"width: #{min(strengths.gk / 99 * 100, 100)}%"}
-                      >
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            <% end %>
           </div>
         </main>
         
