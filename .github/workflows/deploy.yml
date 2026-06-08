@@ -45,6 +45,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
           source: "release.tar.gz,deployment/invincibles.service,deployment/nginx.conf"
           target: "/tmp/"
 
@@ -54,6 +55,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
           script: |
             # Ensure target directories exist
             mkdir -p /var/www/invincibles
