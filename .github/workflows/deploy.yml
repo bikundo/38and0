@@ -73,7 +73,7 @@ jobs:
             # Setup environment variables file
             echo "PORT=4000" > /var/www/invincibles/.env
             echo "PHX_SERVER=true" >> /var/www/invincibles/.env
-            echo "PHX_HOST=${{ secrets.PHX_HOST }}" >> /var/www/invincibles/.env
+            echo "PHX_HOST=invincibles.website" >> /var/www/invincibles/.env
             echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> /var/www/invincibles/.env
             echo "SECRET_KEY_BASE=${{ secrets.SECRET_KEY_BASE }}" >> /var/www/invincibles/.env
             
