@@ -11,6 +11,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Debug Secrets Presence
+        run: |
+          if [ -z "${{ secrets.VPS_HOST }}" ]; then echo "VPS_HOST is missing/empty!"; else echo "VPS_HOST is set."; fi
+          if [ -z "${{ secrets.VPS_USER }}" ]; then echo "VPS_USER is missing/empty!"; else echo "VPS_USER is set."; fi
+          if [ -z "${{ secrets.VPS_SSH_KEY }}" ]; then echo "VPS_SSH_KEY is missing/empty!"; else echo "VPS_SSH_KEY is set."; fi
+
       - name: Set up Elixir & Erlang
         uses: erlef/setup-beam@v1
         with:
