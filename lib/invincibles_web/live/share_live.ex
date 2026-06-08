@@ -16,44 +16,6 @@ defmodule InvinciblesWeb.ShareLive do
           |> assign(:season_label, share.season_label)
           |> assign(:funny_quote, share.funny_quote)
           |> assign(:formation_layouts, GameLive.formation_layouts())
-          |> assign(:position_names, %{
-            gk: "GK",
-            lb: "LB",
-            cb1: "CB",
-            cb2: "CB",
-            cb3: "CB",
-            rb: "RB",
-            lm: "LM",
-            cm: "CM",
-            cm1: "CM",
-            cm2: "CM",
-            cm3: "CM",
-            rm: "RM",
-            lw: "LW",
-            rw: "RW",
-            st: "ST",
-            st1: "ST",
-            st2: "ST"
-          })
-          |> assign(:position_descriptions, %{
-            gk: "Goalkeeper",
-            lb: "Left",
-            cb1: "Centre",
-            cb2: "Centre",
-            cb3: "Centre",
-            rb: "Right",
-            lm: "Left",
-            cm: "Attacking",
-            cm1: "Defensive",
-            cm2: "Defensive",
-            cm3: "Centre",
-            rm: "Right",
-            lw: "Left",
-            rw: "Right",
-            st: "Striker",
-            st1: "Striker",
-            st2: "Striker"
-          })
 
         {:ok, socket}
 
@@ -93,6 +55,7 @@ defmodule InvinciblesWeb.ShareLive do
                 </div>
 
                 <% layout = Map.fetch!(@formation_layouts, @formation) %>
+                <% slot_labels = InvinciblesWeb.GameLive.slot_labels(layout) %>
                 
     <!-- Attacking Line -->
                 <div class="flex justify-around items-center gap-2 z-10 mt-2">
@@ -100,22 +63,41 @@ defmodule InvinciblesWeb.ShareLive do
                     <div class="pitch-slot flex flex-col items-center justify-center transition-all duration-200">
                       <%= if card = @lineup[pos] do %>
                         <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#f43f5e] border-2 border-white/20 flex items-center justify-center text-white font-extrabold text-sm sm:text-base shadow-lg">
-                          {@position_names[pos]}
+                          {elem(slot_labels[pos], 0)}
                         </div>
                         <div class="mt-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-white text-[10px] sm:text-xs font-semibold shadow text-center whitespace-nowrap">
                           {truncate_name(card.player.display_name)}
                         </div>
                       <% else %>
                         <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/80 font-extrabold text-sm sm:text-base">
-                          {@position_names[pos]}
-                        </div>
-                        <div class="mt-2 px-3 py-0.5 bg-black/40 backdrop-blur-sm rounded-full text-white/80 text-[10px] sm:text-xs font-semibold tracking-wide">
-                          {@position_descriptions[pos]}
+                          {elem(slot_labels[pos], 0)}
                         </div>
                       <% end %>
                     </div>
                   <% end %>
                 </div>
+                
+    <!-- Attacking Midfield Line (optional, e.g. 4-2-3-1) -->
+                <%= if layout.amf != [] do %>
+                  <div class="flex justify-around items-center gap-2 z-10 my-3">
+                    <%= for pos <- layout.amf do %>
+                      <div class="pitch-slot flex flex-col items-center justify-center transition-all duration-200">
+                        <%= if card = @lineup[pos] do %>
+                          <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#f43f5e] border-2 border-white/20 flex items-center justify-center text-white font-extrabold text-sm sm:text-base shadow-lg">
+                            {elem(slot_labels[pos], 0)}
+                          </div>
+                          <div class="mt-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-white text-[10px] sm:text-xs font-semibold shadow text-center whitespace-nowrap">
+                            {truncate_name(card.player.display_name)}
+                          </div>
+                        <% else %>
+                          <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/80 font-extrabold text-sm sm:text-base">
+                            {elem(slot_labels[pos], 0)}
+                          </div>
+                        <% end %>
+                      </div>
+                    <% end %>
+                  </div>
+                <% end %>
                 
     <!-- Midfield Line -->
                 <div class="flex justify-around items-center gap-2 z-10 my-4">
@@ -123,17 +105,14 @@ defmodule InvinciblesWeb.ShareLive do
                     <div class="pitch-slot flex flex-col items-center justify-center transition-all duration-200">
                       <%= if card = @lineup[pos] do %>
                         <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#f43f5e] border-2 border-white/20 flex items-center justify-center text-white font-extrabold text-sm sm:text-base shadow-lg">
-                          {@position_names[pos]}
+                          {elem(slot_labels[pos], 0)}
                         </div>
                         <div class="mt-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-white text-[10px] sm:text-xs font-semibold shadow text-center whitespace-nowrap">
                           {truncate_name(card.player.display_name)}
                         </div>
                       <% else %>
                         <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/80 font-extrabold text-sm sm:text-base">
-                          {@position_names[pos]}
-                        </div>
-                        <div class="mt-2 px-3 py-0.5 bg-black/40 backdrop-blur-sm rounded-full text-white/80 text-[10px] sm:text-xs font-semibold tracking-wide">
-                          {@position_descriptions[pos]}
+                          {elem(slot_labels[pos], 0)}
                         </div>
                       <% end %>
                     </div>
@@ -146,17 +125,14 @@ defmodule InvinciblesWeb.ShareLive do
                     <div class="pitch-slot flex flex-col items-center justify-center transition-all duration-200">
                       <%= if card = @lineup[pos] do %>
                         <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#f43f5e] border-2 border-white/20 flex items-center justify-center text-white font-extrabold text-sm sm:text-base shadow-lg">
-                          {@position_names[pos]}
+                          {elem(slot_labels[pos], 0)}
                         </div>
                         <div class="mt-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-white text-[10px] sm:text-xs font-semibold shadow text-center whitespace-nowrap">
                           {truncate_name(card.player.display_name)}
                         </div>
                       <% else %>
                         <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/80 font-extrabold text-sm sm:text-base">
-                          {@position_names[pos]}
-                        </div>
-                        <div class="mt-2 px-3 py-0.5 bg-black/40 backdrop-blur-sm rounded-full text-white/80 text-[10px] sm:text-xs font-semibold tracking-wide">
-                          {@position_descriptions[pos]}
+                          {elem(slot_labels[pos], 0)}
                         </div>
                       <% end %>
                     </div>
@@ -168,17 +144,14 @@ defmodule InvinciblesWeb.ShareLive do
                   <div class="pitch-slot flex flex-col items-center justify-center transition-all duration-200">
                     <%= if card = @lineup[:gk] do %>
                       <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#f43f5e] border-2 border-white/20 flex items-center justify-center text-white font-extrabold text-sm sm:text-base shadow-lg">
-                        {@position_names[:gk]}
+                        GK
                       </div>
                       <div class="mt-2 px-3 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-white text-[10px] sm:text-xs font-semibold max-w-[80px] sm:max-w-[100px] truncate shadow">
                         {truncate_name(card.player.display_name)}
                       </div>
                     <% else %>
                       <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/80 font-extrabold text-sm sm:text-base">
-                        {@position_names[:gk]}
-                      </div>
-                      <div class="mt-2 px-3 py-0.5 bg-black/40 backdrop-blur-sm rounded-full text-white/80 text-[10px] sm:text-xs font-semibold tracking-wide">
-                        {@position_descriptions[:gk]}
+                        GK
                       </div>
                     <% end %>
                   </div>

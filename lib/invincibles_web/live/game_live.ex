@@ -10,60 +10,53 @@ defmodule InvinciblesWeb.GameLive do
     "FW" => [:lw, :st, :st1, :st2, :rw]
   }
 
-  @position_names %{
-    gk: "GK",
-    lb: "LB",
-    cb1: "CB",
-    cb2: "CB",
-    cb3: "CB",
-    rb: "RB",
-    lm: "LM",
-    cm: "CM",
-    cm1: "CM",
-    cm2: "CM",
-    cm3: "CM",
-    rm: "RM",
-    lw: "LW",
-    rw: "RW",
-    st: "ST",
-    st1: "ST",
-    st2: "ST"
-  }
-
-  @position_descriptions %{
-    gk: "Goalkeeper",
-    lb: "Left",
-    cb1: "Centre",
-    cb2: "Centre",
-    cb3: "Centre",
-    rb: "Right",
-    lm: "Left",
-    cm: "Attacking",
-    cm1: "Defensive",
-    cm2: "Defensive",
-    cm3: "Centre",
-    rm: "Right",
-    lw: "Left",
-    rw: "Right",
-    st: "Striker",
-    st1: "Striker",
-    st2: "Striker"
-  }
-
   @formation_layouts %{
     "4-3-3" => %{
       def: [:lb, :cb1, :cb2, :rb],
+      amf: [],
       mid: [:lm, :cm, :rm],
       fwd: [:lw, :st, :rw]
     },
     "4-4-2" => %{
       def: [:lb, :cb1, :cb2, :rb],
+      amf: [],
       mid: [:lm, :cm1, :cm2, :rm],
       fwd: [:st1, :st2]
     },
     "3-5-2" => %{
       def: [:cb1, :cb2, :cb3],
+      amf: [],
       mid: [:lm, :cm1, :cm2, :cm3, :rm],
+      fwd: [:st1, :st2]
+    },
+    "4-2-3-1" => %{
+      def: [:lb, :cb1, :cb2, :rb],
+      amf: [:lm, :cm3, :rm],
+      mid: [:cm1, :cm2],
+      fwd: [:st]
+    },
+    "4-1-4-1" => %{
+      def: [:lb, :cb1, :cb2, :rb],
+      amf: [:lm, :cm2, :cm3, :rm],
+      mid: [:cm1],
+      fwd: [:st]
+    },
+    "4-5-1" => %{
+      def: [:lb, :cb1, :cb2, :rb],
+      amf: [],
+      mid: [:lm, :cm1, :cm2, :cm3, :rm],
+      fwd: [:st]
+    },
+    "3-4-3" => %{
+      def: [:cb1, :cb2, :cb3],
+      amf: [],
+      mid: [:lm, :cm1, :cm2, :rm],
+      fwd: [:lw, :st, :rw]
+    },
+    "5-3-2" => %{
+      def: [:lb, :cb1, :cb2, :cb3, :rb],
+      amf: [],
+      mid: [:lm, :cm, :rm],
       fwd: [:st1, :st2]
     }
   }
@@ -104,8 +97,119 @@ defmodule InvinciblesWeb.GameLive do
     |> assign(:season_record, %{week: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0})
     |> assign(:sim_results, nil)
     |> assign(:simulating_week, nil)
-    |> assign(:position_names, @position_names)
-    |> assign(:position_descriptions, @position_descriptions)
+  end
+
+  @doc """
+  Returns formation-aware position labels for each slot in a given layout.
+  Each slot maps to a tuple of `{abbreviation, full_name}`, e.g. `{"CDM", "Def. Mid"}`.
+  """
+  def slot_labels(layout) do
+    gk = %{gk: {"GK", "Goalkeeper"}}
+
+    def_count = length(layout.def)
+
+    def_labels =
+      Enum.into(layout.def, %{}, fn slot ->
+        {slot,
+         case slot do
+           :lb -> if def_count == 5, do: {"LWB", "Wing-Back"}, else: {"LB", "Left Back"}
+           :rb -> if def_count == 5, do: {"RWB", "Wing-Back"}, else: {"RB", "Right Back"}
+           _ -> {"CB", "Centre Back"}
+         end}
+      end)
+
+    has_amf = layout.amf != []
+
+    amf_labels =
+      case layout.amf do
+        [] ->
+          %{}
+
+        [single] ->
+          %{single => {"CAM", "Att. Mid"}}
+
+        [l, c, r] ->
+          %{
+            l => {"LAM", "Left Att. Mid"},
+            c => {"CAM", "Att. Mid"},
+            r => {"RAM", "Right Att. Mid"}
+          }
+
+        [l, lc, rc, r] ->
+          %{
+            l => {"LM", "Left Mid"},
+            lc => {"LCM", "Left CM"},
+            rc => {"RCM", "Right CM"},
+            r => {"RM", "Right Mid"}
+          }
+
+        other ->
+          Map.new(other, fn s -> {s, {"AM", "Att. Mid"}} end)
+      end
+
+    mid_labels =
+      case {length(layout.mid), has_amf} do
+        {1, _} ->
+          [m] = layout.mid
+          %{m => {"CDM", "Def. Mid"}}
+
+        {2, true} ->
+          [m1, m2] = layout.mid
+          %{m1 => {"CDM", "Def. Mid"}, m2 => {"CDM", "Def. Mid"}}
+
+        {2, false} ->
+          [m1, m2] = layout.mid
+          %{m1 => {"CM", "Central Mid"}, m2 => {"CM", "Central Mid"}}
+
+        {3, _} ->
+          [m1, m2, m3] = layout.mid
+          %{m1 => {"LM", "Left Mid"}, m2 => {"CM", "Central Mid"}, m3 => {"RM", "Right Mid"}}
+
+        {4, _} ->
+          [m1, m2, m3, m4] = layout.mid
+
+          %{
+            m1 => {"LM", "Left Mid"},
+            m2 => {"CM", "Central Mid"},
+            m3 => {"CM", "Central Mid"},
+            m4 => {"RM", "Right Mid"}
+          }
+
+        {5, _} ->
+          [m1, m2, m3, m4, m5] = layout.mid
+
+          %{
+            m1 => {"LM", "Left Mid"},
+            m2 => {"CM", "Central Mid"},
+            m3 => {"CM", "Central Mid"},
+            m4 => {"CM", "Central Mid"},
+            m5 => {"RM", "Right Mid"}
+          }
+
+        _ ->
+          Map.new(layout.mid, fn s -> {s, {"CM", "Central Mid"}} end)
+      end
+
+    fwd_labels =
+      case layout.fwd do
+        [:lw, :st, :rw] ->
+          %{lw: {"LW", "Left Wing"}, st: {"ST", "Striker"}, rw: {"RW", "Right Wing"}}
+
+        [:st1, :st2] ->
+          %{st1: {"ST", "Striker"}, st2: {"ST", "Striker"}}
+
+        [:st] ->
+          %{st: {"ST", "Striker"}}
+
+        _ ->
+          Map.new(layout.fwd, fn s -> {s, {"FW", "Forward"}} end)
+      end
+
+    gk
+    |> Map.merge(def_labels)
+    |> Map.merge(amf_labels)
+    |> Map.merge(mid_labels)
+    |> Map.merge(fwd_labels)
   end
 
   @impl true
@@ -169,7 +273,7 @@ defmodule InvinciblesWeb.GameLive do
   @impl true
   def handle_event("auto_draft", _params, socket) do
     layout = Map.fetch!(@formation_layouts, socket.assigns.formation)
-    active_slots = [:gk | layout.def ++ layout.mid ++ layout.fwd]
+    active_slots = [:gk | layout.def ++ layout.amf ++ layout.mid ++ layout.fwd]
     new_lineup = Game.auto_draft_lineup(socket.assigns.lineup, active_slots)
 
     socket =
@@ -203,7 +307,7 @@ defmodule InvinciblesWeb.GameLive do
 
         # Check if squad is complete (all active slots filled)
         layout = Map.fetch!(@formation_layouts, socket.assigns.formation)
-        active_slots = [:gk | layout.def ++ layout.mid ++ layout.fwd]
+        active_slots = [:gk | layout.def ++ layout.amf ++ layout.mid ++ layout.fwd]
 
         squad_complete =
           Enum.all?(active_slots, fn slot -> not is_nil(Map.get(new_lineup, slot)) end)
@@ -405,6 +509,7 @@ defmodule InvinciblesWeb.GameLive do
                 </div>
 
                 <% layout = Map.fetch!(@formation_layouts, @formation) %>
+                <% slot_labels = InvinciblesWeb.GameLive.slot_labels(layout) %>
                 
     <!-- Attacking Line -->
                 <div class="flex justify-around items-center gap-2 z-10 mt-2">
@@ -416,7 +521,7 @@ defmodule InvinciblesWeb.GameLive do
                       <%= if card = @lineup[pos] do %>
                         <!-- Occupied Circle -->
                         <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#f43f5e] border-2 border-white/20 flex items-center justify-center text-white font-extrabold text-sm sm:text-base shadow-lg cursor-grab active:cursor-grabbing hover:scale-105 transition-all">
-                          {@position_names[pos]}
+                          {elem(slot_labels[pos], 0)}
                         </div>
                         <div class="mt-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-white text-[10px] sm:text-xs font-semibold shadow text-center whitespace-nowrap">
                           {truncate_name(card.player.display_name)}
@@ -424,15 +529,39 @@ defmodule InvinciblesWeb.GameLive do
                       <% else %>
                         <!-- Empty Circle -->
                         <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/80 font-extrabold text-sm sm:text-base">
-                          {@position_names[pos]}
-                        </div>
-                        <div class="mt-2 px-3 py-0.5 bg-black/40 backdrop-blur-sm rounded-full text-white/80 text-[10px] sm:text-xs font-semibold tracking-wide">
-                          {@position_descriptions[pos]}
+                          {elem(slot_labels[pos], 0)}
                         </div>
                       <% end %>
                     </div>
                   <% end %>
                 </div>
+                
+    <!-- Attacking Midfield Line (optional, e.g. 4-2-3-1) -->
+                <%= if layout.amf != [] do %>
+                  <div class="flex justify-around items-center gap-2 z-10 my-3">
+                    <%= for pos <- layout.amf do %>
+                      <div
+                        data-position-key={pos}
+                        class="pitch-slot flex flex-col items-center justify-center transition-all duration-200"
+                      >
+                        <%= if card = @lineup[pos] do %>
+                          <!-- Occupied Circle -->
+                          <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#f43f5e] border-2 border-white/20 flex items-center justify-center text-white font-extrabold text-sm sm:text-base shadow-lg cursor-grab active:cursor-grabbing hover:scale-105 transition-all">
+                            {elem(slot_labels[pos], 0)}
+                          </div>
+                          <div class="mt-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-white text-[10px] sm:text-xs font-semibold shadow text-center whitespace-nowrap">
+                            {truncate_name(card.player.display_name)}
+                          </div>
+                        <% else %>
+                          <!-- Empty Circle -->
+                          <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/80 font-extrabold text-sm sm:text-base">
+                            {elem(slot_labels[pos], 0)}
+                          </div>
+                        <% end %>
+                      </div>
+                    <% end %>
+                  </div>
+                <% end %>
                 
     <!-- Midfield Line -->
                 <div class="flex justify-around items-center gap-2 z-10 my-4">
@@ -444,7 +573,7 @@ defmodule InvinciblesWeb.GameLive do
                       <%= if card = @lineup[pos] do %>
                         <!-- Occupied Circle -->
                         <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#f43f5e] border-2 border-white/20 flex items-center justify-center text-white font-extrabold text-sm sm:text-base shadow-lg cursor-grab active:cursor-grabbing hover:scale-105 transition-all">
-                          {@position_names[pos]}
+                          {elem(slot_labels[pos], 0)}
                         </div>
                         <div class="mt-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-white text-[10px] sm:text-xs font-semibold shadow text-center whitespace-nowrap">
                           {truncate_name(card.player.display_name)}
@@ -452,10 +581,7 @@ defmodule InvinciblesWeb.GameLive do
                       <% else %>
                         <!-- Empty Circle -->
                         <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/80 font-extrabold text-sm sm:text-base">
-                          {@position_names[pos]}
-                        </div>
-                        <div class="mt-2 px-3 py-0.5 bg-black/40 backdrop-blur-sm rounded-full text-white/80 text-[10px] sm:text-xs font-semibold tracking-wide">
-                          {@position_descriptions[pos]}
+                          {elem(slot_labels[pos], 0)}
                         </div>
                       <% end %>
                     </div>
@@ -472,7 +598,7 @@ defmodule InvinciblesWeb.GameLive do
                       <%= if card = @lineup[pos] do %>
                         <!-- Occupied Circle -->
                         <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#f43f5e] border-2 border-white/20 flex items-center justify-center text-white font-extrabold text-sm sm:text-base shadow-lg cursor-grab active:cursor-grabbing hover:scale-105 transition-all">
-                          {@position_names[pos]}
+                          {elem(slot_labels[pos], 0)}
                         </div>
                         <div class="mt-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-white text-[10px] sm:text-xs font-semibold shadow text-center whitespace-nowrap">
                           {truncate_name(card.player.display_name)}
@@ -480,10 +606,7 @@ defmodule InvinciblesWeb.GameLive do
                       <% else %>
                         <!-- Empty Circle -->
                         <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/80 font-extrabold text-sm sm:text-base">
-                          {@position_names[pos]}
-                        </div>
-                        <div class="mt-2 px-3 py-0.5 bg-black/40 backdrop-blur-sm rounded-full text-white/80 text-[10px] sm:text-xs font-semibold tracking-wide">
-                          {@position_descriptions[pos]}
+                          {elem(slot_labels[pos], 0)}
                         </div>
                       <% end %>
                     </div>
@@ -499,7 +622,7 @@ defmodule InvinciblesWeb.GameLive do
                     <%= if card = @lineup[:gk] do %>
                       <!-- Occupied Circle -->
                       <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#f43f5e] border-2 border-white/20 flex items-center justify-center text-white font-extrabold text-sm sm:text-base shadow-lg cursor-grab active:cursor-grabbing hover:scale-105 transition-all">
-                        {@position_names[:gk]}
+                        {elem(slot_labels[:gk], 0)}
                       </div>
                       <div class="mt-2 px-3 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-white text-[10px] sm:text-xs font-semibold max-w-[80px] sm:max-w-[100px] truncate shadow">
                         {truncate_name(card.player.display_name)}
@@ -507,10 +630,7 @@ defmodule InvinciblesWeb.GameLive do
                     <% else %>
                       <!-- Empty Circle -->
                       <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/80 font-extrabold text-sm sm:text-base">
-                        {@position_names[:gk]}
-                      </div>
-                      <div class="mt-2 px-3 py-0.5 bg-black/40 backdrop-blur-sm rounded-full text-white/80 text-[10px] sm:text-xs font-semibold tracking-wide">
-                        {@position_descriptions[:gk]}
+                        {elem(slot_labels[:gk], 0)}
                       </div>
                     <% end %>
                   </div>
@@ -691,8 +811,8 @@ defmodule InvinciblesWeb.GameLive do
                     <label class="text-[10px] font-semibold text-[rgba(0,0,0,0.58)] uppercase tracking-[0.6px] block mb-2">
                       Select Formation
                     </label>
-                    <div class="grid grid-cols-3 gap-2">
-                      <%= for form_name <- ["4-3-3", "4-4-2", "3-5-2"] do %>
+                    <div class="grid grid-cols-4 gap-2">
+                      <%= for form_name <- ["4-3-3", "4-4-2", "4-2-3-1", "4-1-4-1", "4-5-1", "3-4-3", "3-5-2", "5-3-2"] do %>
                         <button
                           type="button"
                           phx-click="select_formation"
@@ -855,7 +975,8 @@ defmodule InvinciblesWeb.GameLive do
                       <%= for app <- filtered_pool do %>
                         <% already_drafted = player_already_drafted?(@lineup, app.player_id) %>
                         <% layout = Map.fetch!(@formation_layouts, @formation) %>
-                        <% active_slots = [:gk | layout.def ++ layout.mid ++ layout.fwd] %>
+                        <% slot_labels = InvinciblesWeb.GameLive.slot_labels(layout) %>
+                        <% active_slots = [:gk | layout.def ++ layout.amf ++ layout.mid ++ layout.fwd] %>
                         <% compatible_slots =
                           compatible_empty_slots(@lineup, app.player.primary_position, active_slots) %>
                         <% unselectable = already_drafted or Enum.empty?(compatible_slots) %>
@@ -913,7 +1034,7 @@ defmodule InvinciblesWeb.GameLive do
                                     phx-value-position-key={slot}
                                     class="bg-[#00754A] hover:bg-[#006241] text-white font-bold text-[10px] px-2 py-1 rounded shadow-sm tracking-wider uppercase transition-colors"
                                   >
-                                    {@position_names[slot]}
+                                    {elem(slot_labels[slot], 0)}
                                   </button>
                                 <% end %>
                             <% end %>
