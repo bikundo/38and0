@@ -916,159 +916,8 @@ defmodule InvinciblesWeb.GameLive do
                     </div>
                   </div>
                 </div>
-                <!-- End share-capture-area -->
-
-                <%= if @step in [:game_over, :hall_of_fame] do %>
-                  <% pts = @season_record.wins * 3 + @season_record.draws
-                  gd = @season_record.gf - @season_record.ga
-                  gd_str = if gd >= 0, do: "+#{gd}", else: "#{gd}"
-                  is_invincible = @season_record.losses == 0
-                  is_perfect = @season_record.wins == 38
-                  funny_quote = get_funny_quote(@season_record)
-                  first_loss = Enum.find(@sim_results.matches, &(&1.result == :loss)) %>
-                  <div id="standings-table-card">
-                    <%!-- Header banner --%>
-                    <div class={[
-                      "rounded-t-xl px-6 py-4 flex items-center justify-between",
-                      if(is_perfect,
-                        do: "bg-gradient-to-r from-[#cba258] to-[#f0d47c]",
-                        else:
-                          if(is_invincible,
-                            do: "bg-gradient-to-r from-[#006241] to-[#00754A]",
-                            else: "bg-gradient-to-r from-[#1a1a1a] to-[#333]"
-                          )
-                      )
-                    ]}>
-                      <div>
-                        <div class="text-[10px] font-bold uppercase tracking-[1.2px] text-white/70 mb-0.5">
-                          {if @step == :hall_of_fame, do: "Golden Campaign", else: "Season Complete"}
-                          <%= if @sim_results && Map.get(@sim_results, :season_label) do %>
-                            · {@sim_results.season_label}
-                          <% end %>
-                        </div>
-                        <div class="text-white font-black text-2xl tracking-tight leading-none">
-                          {if is_perfect,
-                            do: "PERFECT SEASON",
-                            else: if(is_invincible, do: "INVINCIBLES", else: "FINAL RECORD")}
-                        </div>
-                      </div>
-                      <div class="text-right">
-                        <div class="text-white/60 text-[10px] uppercase tracking-wider">Points</div>
-                        <div class="text-white font-black text-3xl leading-none">{pts}</div>
-                      </div>
-                    </div>
-
-                    <%!-- Stats pillars --%>
-                    <div class="bg-white border-x border-[rgba(0,0,0,0.08)] px-6 py-5">
-                      <div class="grid grid-cols-5 gap-2 text-center mb-5">
-                        <div class="flex flex-col gap-1">
-                          <span class="text-[22px] font-black text-[#006241] leading-none">
-                            {@season_record.wins}
-                          </span>
-                          <span class="text-[9px] font-bold uppercase tracking-wider text-[rgba(0,0,0,0.4)]">
-                            Won
-                          </span>
-                        </div>
-                        <div class="flex flex-col gap-1">
-                          <span class="text-[22px] font-black text-[rgba(0,0,0,0.5)] leading-none">
-                            {@season_record.draws}
-                          </span>
-                          <span class="text-[9px] font-bold uppercase tracking-wider text-[rgba(0,0,0,0.4)]">
-                            Drawn
-                          </span>
-                        </div>
-                        <div class="flex flex-col gap-1">
-                          <span class={[
-                            "text-[22px] font-black leading-none",
-                            if(@season_record.losses == 0,
-                              do: "text-[#006241]",
-                              else: "text-[#c82014]"
-                            )
-                          ]}>
-                            {@season_record.losses}
-                          </span>
-                          <span class="text-[9px] font-bold uppercase tracking-wider text-[rgba(0,0,0,0.4)]">
-                            Lost
-                          </span>
-                        </div>
-                        <div class="flex flex-col gap-1">
-                          <span class="text-[22px] font-black text-[rgba(0,0,0,0.75)] leading-none">
-                            {@season_record.gf}
-                          </span>
-                          <span class="text-[9px] font-bold uppercase tracking-wider text-[rgba(0,0,0,0.4)]">
-                            GF
-                          </span>
-                        </div>
-                        <div class="flex flex-col gap-1">
-                          <span class={[
-                            "text-[22px] font-black leading-none",
-                            if(gd >= 0, do: "text-[#006241]", else: "text-[#c82014]")
-                          ]}>
-                            {gd_str}
-                          </span>
-                          <span class="text-[9px] font-bold uppercase tracking-wider text-[rgba(0,0,0,0.4)]">
-                            GD
-                          </span>
-                        </div>
-                      </div>
-
-                      <%!-- First loss callout --%>
-                      <%= if first_loss do %>
-                        <div class="text-xs text-[rgba(0,0,0,0.6)] font-semibold text-center mt-4 mb-2 flex items-center justify-center gap-1.5">
-                          <span class="w-1.5 h-1.5 rounded-full bg-[#c82014]"></span>
-                          <span>
-                            First loss at GW {first_loss.week} — {first_loss.gf}–{first_loss.ga} vs {Map.get(
-                              first_loss,
-                              :opponent_short,
-                              "OPP"
-                            )}
-                          </span>
-                        </div>
-                      <% end %>
-
-                      <%!-- Funny quote --%>
-                      <div class={[
-                        "text-center text-sm sm:text-base leading-relaxed italic mt-3 px-4",
-                        if(is_perfect,
-                          do: "text-[#7a5c1e] font-semibold",
-                          else:
-                            if(is_invincible,
-                              do: "text-[#006241] font-semibold",
-                              else: "text-[rgba(0,0,0,0.78)] font-medium"
-                            )
-                        )
-                      ]}>
-                        "{funny_quote}"
-                      </div>
-                    </div>
-
-                    <%!-- Footer actions --%>
-                    <div class="bg-[#f7f7f5] border border-[rgba(0,0,0,0.08)] rounded-b-xl px-6 py-4 flex items-center justify-between">
-                      <span class="text-[10px] text-[rgba(0,0,0,0.4)]">
-                        GA: {@season_record.ga} · Pts: {pts}
-                      </span>
-                      <button
-                        id="share-btn"
-                        phx-hook="ShareButton"
-                        data-wins={@season_record.wins}
-                        data-draws={@season_record.draws}
-                        data-losses={@season_record.losses}
-                        data-points={pts}
-                        data-season={
-                          if @sim_results, do: Map.get(@sim_results, :season_label, ""), else: ""
-                        }
-                        data-quote={funny_quote}
-                        class="btn-starbucks btn-starbucks-black text-xs flex items-center gap-2"
-                      >
-                        <svg class="w-4 h-4 fill-current text-white" viewBox="0 0 24 24">
-                          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                        </svg>
-                        SHARE TO TWITTER
-                      </button>
-                    </div>
-                  </div>
-                <% end %>
               </div>
+              <!-- End share-capture-area -->
 
               <%!-- Mobile Match History --%>
               <%= if @step in [:game_over, :hall_of_fame] and @sim_results && @sim_results.matches != [] do %>
@@ -1117,502 +966,596 @@ defmodule InvinciblesWeb.GameLive do
             <div class="order-1 lg:order-2 lg:col-span-4 flex flex-col gap-6">
               
     <!-- Game State Controller card -->
-              <div class="card-starbucks p-6 flex flex-col gap-6">
-                <%= if @step == :not_started do %>
-                  <div class="text-center py-6">
-                    <div class="w-12 h-12 mx-auto bg-[#edebe9] border border-[rgba(0,0,0,0.08)] rounded-[12px] flex items-center justify-center mb-4">
-                      <.icon name="hero-trophy" class="w-6 h-6 text-[#00754A]" />
-                    </div>
-                    <h2 class="text-[20px] font-bold tracking-tight mb-2 text-[#006241]">
-                      Can you build an Invincible squad?
-                    </h2>
-                    <p class="text-xs text-[rgba(0,0,0,0.58)] leading-relaxed mb-6">
-                      Draft an 11-man squad using historical Premier League players. Each round, you spin the wheel to draw a random club and season, then draft from eligible players. Go undefeated over a 38-game season to cement your status as an Invincible.
-                    </p>
+              <%= if @step not in [:game_over, :hall_of_fame] do %>
+                <div class="card-starbucks p-6 flex flex-col gap-6">
+                  <%= if @step == :not_started do %>
+                    <div class="text-center py-6">
+                      <div class="w-12 h-12 mx-auto bg-[#edebe9] border border-[rgba(0,0,0,0.08)] rounded-[12px] flex items-center justify-center mb-4">
+                        <.icon name="hero-trophy" class="w-6 h-6 text-[#00754A]" />
+                      </div>
+                      <h2 class="text-[20px] font-bold tracking-tight mb-2 text-[#006241]">
+                        Can you build an Invincible squad?
+                      </h2>
+                      <p class="text-xs text-[rgba(0,0,0,0.58)] leading-relaxed mb-6">
+                        Draft an 11-man squad using historical Premier League players. Each round, you spin the wheel to draw a random club and season, then draft from eligible players. Go undefeated over a 38-game season to cement your status as an Invincible.
+                      </p>
 
-                    <%!-- Formation Selection --%>
-                    <div class="mb-6 text-left">
-                      <label class="text-[10px] font-semibold text-[rgba(0,0,0,0.58)] uppercase tracking-[0.6px] block mb-2">
-                        Select Formation
-                      </label>
-                      <div class="grid grid-cols-4 gap-2">
-                        <%= for form_name <- ["4-3-3", "4-4-2", "4-2-3-1", "4-1-4-1", "4-5-1", "3-4-3", "3-5-2", "5-3-2"] do %>
-                          <button
-                            type="button"
-                            phx-click="select_formation"
-                            phx-value-formation={form_name}
-                            class={[
-                              "py-2 px-3 text-xs font-semibold rounded-lg border transition-all duration-150",
-                              if(@formation == form_name,
-                                do: "bg-[#00754A] text-white border-[#00754A]",
-                                else:
-                                  "bg-white text-[rgba(0,0,0,0.87)] border-[rgba(0,0,0,0.12)] hover:border-[#00754A]"
-                              )
-                            ]}
-                          >
-                            {form_name}
-                          </button>
-                        <% end %>
+                      <%!-- Formation Selection --%>
+                      <div class="mb-6 text-left">
+                        <label class="text-[10px] font-semibold text-[rgba(0,0,0,0.58)] uppercase tracking-[0.6px] block mb-2">
+                          Select Formation
+                        </label>
+                        <div class="grid grid-cols-4 gap-2">
+                          <%= for form_name <- ["4-3-3", "4-4-2", "4-2-3-1", "4-1-4-1", "4-5-1", "3-4-3", "3-5-2", "5-3-2"] do %>
+                            <button
+                              type="button"
+                              phx-click="select_formation"
+                              phx-value-formation={form_name}
+                              class={[
+                                "py-2 px-3 text-xs font-semibold rounded-lg border transition-all duration-150",
+                                if(@formation == form_name,
+                                  do: "bg-[#00754A] text-white border-[#00754A]",
+                                  else:
+                                    "bg-white text-[rgba(0,0,0,0.87)] border-[rgba(0,0,0,0.12)] hover:border-[#00754A]"
+                                )
+                              ]}
+                            >
+                              {form_name}
+                            </button>
+                          <% end %>
+                        </div>
+                      </div>
+
+                      <div class="flex flex-col gap-2.5">
+                        <button
+                          phx-click="start_game"
+                          class="w-full btn-starbucks btn-starbucks-filled text-sm"
+                        >
+                          START DRAFT
+                        </button>
+                        <button
+                          phx-click="auto_draft"
+                          class="w-full btn-starbucks btn-starbucks-black text-sm"
+                        >
+                          AUTO DRAFT SQUAD
+                        </button>
                       </div>
                     </div>
+                  <% end %>
 
-                    <div class="flex flex-col gap-2.5">
-                      <button
-                        phx-click="start_game"
-                        class="w-full btn-starbucks btn-starbucks-filled text-sm"
-                      >
-                        START DRAFT
-                      </button>
-                      <button
-                        phx-click="auto_draft"
-                        class="w-full btn-starbucks btn-starbucks-black text-sm"
-                      >
-                        AUTO DRAFT SQUAD
-                      </button>
-                    </div>
-                  </div>
-                <% end %>
-
-                <%= if @step == :spinning do %>
-                  <div class="text-center py-6">
-                    <div
-                      id="spin-wheel-container"
-                      class="w-14 h-14 mx-auto bg-[#edebe9] border border-[rgba(0,0,0,0.08)] rounded-full flex items-center justify-center mb-4 shadow-sm"
-                    >
-                      <.icon name="hero-arrow-path" class="w-6 h-6 text-[#00754A]" />
-                    </div>
-                    <h2 class="text-[20px] font-bold tracking-tight mb-2 text-[#006241]">
-                      Draw Club & Season
-                    </h2>
-                    <p class="text-xs text-[rgba(0,0,0,0.58)] leading-relaxed mb-6 max-w-xs mx-auto">
-                      Every player draft pick is restricted to a specific Premier League club and season. Spin the wheel to reveal your next requirement.
-                    </p>
-                    <div class="flex flex-col gap-2.5">
-                      <button
-                        id="spin-btn"
-                        phx-hook="SpinWheel"
-                        class="w-full btn-starbucks btn-starbucks-filled btn-spin-wheel text-sm"
-                      >
-                        Spin the Wheel
-                      </button>
-                      <button
-                        phx-click="auto_draft"
-                        class="w-full btn-starbucks btn-starbucks-black text-sm"
-                      >
-                        Auto Draft Remaining
-                      </button>
-                    </div>
-                  </div>
-                <% end %>
-
-                <%= if @step == :drafting do %>
-                  <div>
-                    <div class="flex items-center justify-between border-b border-[rgba(0,0,0,0.08)] pb-3 mb-4">
-                      <span class="text-[11px] font-semibold text-[rgba(0,0,0,0.58)] uppercase tracking-[0.6px]">
-                        Active Club & Season
-                      </span>
-                      <span class="text-[#00754A] text-[11px] font-semibold uppercase tracking-[0.6px]">
-                        Drafting
-                      </span>
-                    </div>
-
-                    <%= if @current_spin do %>
-                      <% {club, season} = @current_spin %>
+                  <%= if @step == :spinning do %>
+                    <div class="text-center py-6">
                       <div
-                        id="spin-result-card"
-                        class="flex items-center justify-between bg-[#edebe9] border border-[rgba(0,0,0,0.08)] rounded-lg p-3.5 mb-4"
+                        id="spin-wheel-container"
+                        class="w-14 h-14 mx-auto bg-[#edebe9] border border-[rgba(0,0,0,0.08)] rounded-full flex items-center justify-center mb-4 shadow-sm"
                       >
-                        <span class="font-bold text-sm text-[rgba(0,0,0,0.87)]">{club.name}</span>
-                        <span class="text-[rgba(0,0,0,0.58)] text-xs font-semibold uppercase tracking-[0.6px]">
-                          {season}
+                        <.icon name="hero-arrow-path" class="w-6 h-6 text-[#00754A]" />
+                      </div>
+                      <h2 class="text-[20px] font-bold tracking-tight mb-2 text-[#006241]">
+                        Draw Club & Season
+                      </h2>
+                      <p class="text-xs text-[rgba(0,0,0,0.58)] leading-relaxed mb-6 max-w-xs mx-auto">
+                        Every player draft pick is restricted to a specific Premier League club and season. Spin the wheel to reveal your next requirement.
+                      </p>
+                      <div class="flex flex-col gap-2.5">
+                        <button
+                          id="spin-btn"
+                          phx-hook="SpinWheel"
+                          class="w-full btn-starbucks btn-starbucks-filled btn-spin-wheel text-sm"
+                        >
+                          Spin the Wheel
+                        </button>
+                        <button
+                          phx-click="auto_draft"
+                          class="w-full btn-starbucks btn-starbucks-black text-sm"
+                        >
+                          Auto Draft Remaining
+                        </button>
+                      </div>
+                    </div>
+                  <% end %>
+
+                  <%= if @step == :drafting do %>
+                    <div>
+                      <div class="flex items-center justify-between border-b border-[rgba(0,0,0,0.08)] pb-3 mb-4">
+                        <span class="text-[11px] font-semibold text-[rgba(0,0,0,0.58)] uppercase tracking-[0.6px]">
+                          Active Club & Season
+                        </span>
+                        <span class="text-[#00754A] text-[11px] font-semibold uppercase tracking-[0.6px]">
+                          Drafting
                         </span>
                       </div>
-                    <% end %>
 
-                    <%!-- Search Bar --%>
-                    <div class="relative mb-4">
-                      <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <.icon
-                          name="hero-magnifying-glass"
-                          class="w-3.5 h-3.5 text-[rgba(0,0,0,0.38)]"
+                      <%= if @current_spin do %>
+                        <% {club, season} = @current_spin %>
+                        <div
+                          id="spin-result-card"
+                          class="flex items-center justify-between bg-[#edebe9] border border-[rgba(0,0,0,0.08)] rounded-lg p-3.5 mb-4"
+                        >
+                          <span class="font-bold text-sm text-[rgba(0,0,0,0.87)]">{club.name}</span>
+                          <span class="text-[rgba(0,0,0,0.58)] text-xs font-semibold uppercase tracking-[0.6px]">
+                            {season}
+                          </span>
+                        </div>
+                      <% end %>
+
+                      <%!-- Search Bar --%>
+                      <div class="relative mb-4">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <.icon
+                            name="hero-magnifying-glass"
+                            class="w-3.5 h-3.5 text-[rgba(0,0,0,0.38)]"
+                          />
+                        </div>
+                        <input
+                          id="draft-search"
+                          type="text"
+                          placeholder="Search players..."
+                          phx-keyup="filter_draft"
+                          phx-debounce="150"
+                          value={@search_filter}
+                          class="w-full bg-[#f9f9f9] border border-[rgba(0,0,0,0.12)] rounded-lg pl-9 pr-3 py-2 text-xs text-[rgba(0,0,0,0.87)] placeholder-[rgba(0,0,0,0.38)] focus:outline-none focus:border-[#00754A] focus:ring-1 focus:ring-[#00754A] transition-colors"
                         />
                       </div>
-                      <input
-                        id="draft-search"
-                        type="text"
-                        placeholder="Search players..."
-                        phx-keyup="filter_draft"
-                        phx-debounce="150"
-                        value={@search_filter}
-                        class="w-full bg-[#f9f9f9] border border-[rgba(0,0,0,0.12)] rounded-lg pl-9 pr-3 py-2 text-xs text-[rgba(0,0,0,0.87)] placeholder-[rgba(0,0,0,0.38)] focus:outline-none focus:border-[#00754A] focus:ring-1 focus:ring-[#00754A] transition-colors"
-                      />
-                    </div>
 
-                    <div class="flex items-center justify-between mb-3">
-                      <span class="text-[11px] font-semibold text-[rgba(0,0,0,0.58)] uppercase tracking-[0.6px]">
-                        Draft Pool
-                      </span>
-                      <button
-                        type="button"
-                        phx-click="auto_draft"
-                        class="text-[#00754A] hover:text-[#006241] text-[10px] font-bold uppercase tracking-[0.6px] transition-colors"
-                      >
-                        Auto Draft
-                      </button>
-                    </div>
-
-                    <%= if Enum.empty?(@draft_pool) do %>
-                      <div class="text-center py-6 bg-[#edebe9] rounded-lg border border-dashed border-[rgba(0,0,0,0.12)]">
-                        <p class="text-xs text-[rgba(0,0,0,0.58)] mb-4">
-                          No historical players found for this club and season.
-                        </p>
-                        <div class="flex flex-col gap-2">
-                          <button
-                            phx-click="spin_wheel"
-                            class="btn-starbucks btn-starbucks-outlined text-xs"
-                          >
-                            SPIN AGAIN
-                          </button>
-                          <button
-                            phx-click="auto_draft"
-                            class="btn-starbucks btn-starbucks-black text-xs"
-                          >
-                            AUTO DRAFT REMAINING
-                          </button>
-                        </div>
+                      <div class="flex items-center justify-between mb-3">
+                        <span class="text-[11px] font-semibold text-[rgba(0,0,0,0.58)] uppercase tracking-[0.6px]">
+                          Draft Pool
+                        </span>
+                        <button
+                          type="button"
+                          phx-click="auto_draft"
+                          class="text-[#00754A] hover:text-[#006241] text-[10px] font-bold uppercase tracking-[0.6px] transition-colors"
+                        >
+                          Auto Draft
+                        </button>
                       </div>
-                    <% else %>
-                      <% search_lower = String.downcase(@search_filter) %>
-                      <% filtered_pool =
-                        if @search_filter == "",
-                          do: @draft_pool,
-                          else:
-                            Enum.filter(@draft_pool, fn app ->
-                              String.contains?(String.downcase(app.player.display_name), search_lower)
-                            end) %>
 
-                      <div class="flex flex-col gap-1 max-h-[420px] overflow-y-auto pr-1">
-                        <%= if Enum.empty?(filtered_pool) do %>
-                          <div class="text-center py-4">
-                            <p class="text-xs text-[rgba(0,0,0,0.38)]">
-                              No players match "{@search_filter}"
-                            </p>
+                      <%= if Enum.empty?(@draft_pool) do %>
+                        <div class="text-center py-6 bg-[#edebe9] rounded-lg border border-dashed border-[rgba(0,0,0,0.12)]">
+                          <p class="text-xs text-[rgba(0,0,0,0.58)] mb-4">
+                            No historical players found for this club and season.
+                          </p>
+                          <div class="flex flex-col gap-2">
+                            <button
+                              phx-click="spin_wheel"
+                              class="btn-starbucks btn-starbucks-outlined text-xs"
+                            >
+                              SPIN AGAIN
+                            </button>
+                            <button
+                              phx-click="auto_draft"
+                              class="btn-starbucks btn-starbucks-black text-xs"
+                            >
+                              AUTO DRAFT REMAINING
+                            </button>
                           </div>
-                        <% end %>
-                        <%= for app <- filtered_pool do %>
-                          <% already_drafted = player_already_drafted?(@lineup, app.player_id) %>
-                          <% layout = Map.fetch!(@formation_layouts, @formation) %>
-                          <% slot_labels = InvinciblesWeb.GameLive.slot_labels(layout) %>
-                          <% active_slots = [
-                            :gk | layout.def ++ layout.amf ++ layout.mid ++ layout.fwd
-                          ] %>
-                          <% compatible_slots =
-                            compatible_empty_slots(@lineup, app.player.primary_position, active_slots) %>
-                          <% unselectable = already_drafted or Enum.empty?(compatible_slots) %>
-                          <div
-                            draggable={if(unselectable, do: "false", else: "true")}
-                            data-appearance-id={app.id}
-                            data-positions={Enum.join(compatible_slots, ",")}
-                            class={[
-                              "group flex flex-col gap-1.5 px-3 py-2.5 rounded-lg border border-transparent transition-all duration-150",
-                              if(unselectable,
-                                do: "opacity-40 cursor-not-allowed",
-                                else:
-                                  "hover:bg-[#f9f9f9] hover:border-[rgba(0,0,0,0.08)] cursor-grab active:cursor-grabbing"
-                              )
-                            ]}
-                          >
-                            <%!-- Top row: badge + name + club --%>
-                            <div class="flex items-center gap-3">
-                              <%!-- OVR Badge --%>
-                              <div class="flex-shrink-0 w-8 h-8 rounded-md bg-[#edebe9] border border-[rgba(0,0,0,0.08)] flex items-center justify-center font-bold text-xs text-[rgba(0,0,0,0.87)]">
-                                {app.ovr}
-                              </div>
+                        </div>
+                      <% else %>
+                        <% search_lower = String.downcase(@search_filter) %>
+                        <% filtered_pool =
+                          if @search_filter == "",
+                            do: @draft_pool,
+                            else:
+                              Enum.filter(@draft_pool, fn app ->
+                                String.contains?(
+                                  String.downcase(app.player.display_name),
+                                  search_lower
+                                )
+                              end) %>
 
-                              <%!-- Player Info --%>
-                              <div class="min-w-0 flex-1">
-                                <div class="font-semibold text-[13px] text-[rgba(0,0,0,0.87)] leading-tight">
-                                  {app.player.name}
-                                </div>
-                                <div class="flex items-center gap-1.5 mt-0.5">
-                                  <span class="text-[10px] font-bold text-[#00754A] uppercase tracking-[0.3px]">
-                                    {app.player.primary_position}
-                                  </span>
-                                  <span class="text-[rgba(0,0,0,0.3)] text-[10px]">·</span>
-                                  <span class="text-[rgba(0,0,0,0.45)] text-[10px] font-medium tracking-wide">
-                                    {app.club.short_name}
-                                  </span>
-                                </div>
-                              </div>
-
-                              <%!-- Drafted / Full badge --%>
-                              <%= cond do %>
-                                <% already_drafted -> %>
-                                  <span class="flex-shrink-0 text-[9px] font-semibold text-[rgba(0,0,0,0.38)] uppercase tracking-[0.4px]">
-                                    Drafted
-                                  </span>
-                                <% Enum.empty?(compatible_slots) -> %>
-                                  <span class="flex-shrink-0 text-[9px] font-semibold text-[rgba(0,0,0,0.38)] uppercase tracking-[0.4px]">
-                                    Full
-                                  </span>
-                                <% true -> %>
-                                  <%!-- nothing on the right side when slots are available --%>
-                              <% end %>
+                        <div class="flex flex-col gap-1 max-h-[420px] overflow-y-auto pr-1">
+                          <%= if Enum.empty?(filtered_pool) do %>
+                            <div class="text-center py-4">
+                              <p class="text-xs text-[rgba(0,0,0,0.38)]">
+                                No players match "{@search_filter}"
+                              </p>
                             </div>
+                          <% end %>
+                          <%= for app <- filtered_pool do %>
+                            <% already_drafted = player_already_drafted?(@lineup, app.player_id) %>
+                            <% layout = Map.fetch!(@formation_layouts, @formation) %>
+                            <% slot_labels = InvinciblesWeb.GameLive.slot_labels(layout) %>
+                            <% active_slots = [
+                              :gk | layout.def ++ layout.amf ++ layout.mid ++ layout.fwd
+                            ] %>
+                            <% compatible_slots =
+                              compatible_empty_slots(
+                                @lineup,
+                                app.player.primary_position,
+                                active_slots
+                              ) %>
+                            <% unselectable = already_drafted or Enum.empty?(compatible_slots) %>
+                            <div
+                              draggable={if(unselectable, do: "false", else: "true")}
+                              data-appearance-id={app.id}
+                              data-positions={Enum.join(compatible_slots, ",")}
+                              class={[
+                                "group flex flex-col gap-1.5 px-3 py-2.5 rounded-lg border border-transparent transition-all duration-150",
+                                if(unselectable,
+                                  do: "opacity-40 cursor-not-allowed",
+                                  else:
+                                    "hover:bg-[#f9f9f9] hover:border-[rgba(0,0,0,0.08)] cursor-grab active:cursor-grabbing"
+                                )
+                              ]}
+                            >
+                              <%!-- Top row: badge + name + club --%>
+                              <div class="flex items-center gap-3">
+                                <%!-- OVR Badge --%>
+                                <div class="flex-shrink-0 w-8 h-8 rounded-md bg-[#edebe9] border border-[rgba(0,0,0,0.08)] flex items-center justify-center font-bold text-xs text-[rgba(0,0,0,0.87)]">
+                                  {app.ovr}
+                                </div>
 
-                            <%!-- Slot buttons row (only when draftable) --%>
-                            <%= if not already_drafted and not Enum.empty?(compatible_slots) do %>
-                              <div class="flex flex-wrap gap-1 pl-11">
-                                <%= for slot <- compatible_slots do %>
-                                  <button
-                                    phx-click="draft_player"
-                                    phx-value-appearance-id={app.id}
-                                    phx-value-position-key={slot}
-                                    class="bg-[#00754A] hover:bg-[#006241] active:scale-95 text-white font-bold text-[9px] px-2 py-0.5 rounded-full tracking-wider uppercase transition-all duration-100"
-                                  >
-                                    {elem(slot_labels[slot], 0)}
-                                  </button>
+                                <%!-- Player Info --%>
+                                <div class="min-w-0 flex-1">
+                                  <div class="font-semibold text-[13px] text-[rgba(0,0,0,0.87)] leading-tight">
+                                    {app.player.name}
+                                  </div>
+                                  <div class="flex items-center gap-1.5 mt-0.5">
+                                    <span class="text-[10px] font-bold text-[#00754A] uppercase tracking-[0.3px]">
+                                      {app.player.primary_position}
+                                    </span>
+                                    <span class="text-[rgba(0,0,0,0.3)] text-[10px]">·</span>
+                                    <span class="text-[rgba(0,0,0,0.45)] text-[10px] font-medium tracking-wide">
+                                      {app.club.short_name}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <%!-- Drafted / Full badge --%>
+                                <%= cond do %>
+                                  <% already_drafted -> %>
+                                    <span class="flex-shrink-0 text-[9px] font-semibold text-[rgba(0,0,0,0.38)] uppercase tracking-[0.4px]">
+                                      Drafted
+                                    </span>
+                                  <% Enum.empty?(compatible_slots) -> %>
+                                    <span class="flex-shrink-0 text-[9px] font-semibold text-[rgba(0,0,0,0.38)] uppercase tracking-[0.4px]">
+                                      Full
+                                    </span>
+                                  <% true -> %>
+                                    <%!-- nothing on the right side when slots are available --%>
                                 <% end %>
                               </div>
-                            <% end %>
-                          </div>
-                        <% end %>
-                      </div>
-                    <% end %>
-                  </div>
-                <% end %>
 
-                <%= if @step == :squad_complete do %>
-                  <div class="text-center py-6">
-                    <div class="w-12 h-12 mx-auto bg-[#edebe9] border border-[rgba(0,0,0,0.08)] rounded-[12px] flex items-center justify-center text-xl mb-4">
-                      ⚽
-                    </div>
-                    <h2 class="text-lg font-bold tracking-tight mb-2 text-[#006241]">
-                      Squad is Complete!
-                    </h2>
-                    <p class="text-xs text-[rgba(0,0,0,0.58)] leading-relaxed mb-6">
-                      You have filled all 11 slots. Ready to simulate the 38-game season?
-                    </p>
-                    <button
-                      phx-click="simulate_season"
-                      class="w-full btn-starbucks btn-starbucks-filled text-sm"
-                    >
-                      START SIMULATION RUN
-                    </button>
-                  </div>
-                <% end %>
-
-                <%= if @step == :simulating do %>
-                  <div>
-                    <div class="flex items-center justify-between border-b border-[rgba(0,0,0,0.08)] pb-3 mb-4">
-                      <span class="text-[11px] font-semibold text-[rgba(0,0,0,0.58)] uppercase tracking-[0.6px]">
-                        Simulating Season
-                        <%= if @sim_results && Map.get(@sim_results, :season_label) do %>
-                          ({@sim_results.season_label})
-                        <% end %>
-                      </span>
-                      <span class="text-[#00754A] text-[10px] font-bold uppercase tracking-[0.6px]">
-                        LIVE MATCHDAY
-                      </span>
-                    </div>
-
-                    <%!-- Simulation Matchday Logs --%>
-                    <div class="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-1">
-                      <%= for match <- Enum.reverse(@sim_results.matches) do %>
-                        <%= if match.week < @season_record.week + 1 do %>
-                          <% result_badge_color =
-                            cond do
-                              match.result == :win -> "text-[#00754A]"
-                              match.result == :draw -> "text-[#cba258]"
-                              true -> "text-[#c82014]"
-                            end %>
-                          <div class="flex items-center justify-between border border-[rgba(0,0,0,0.08)] bg-white p-3 rounded-lg shadow-sm text-[rgba(0,0,0,0.87)]">
-                            <div class="flex items-center gap-2">
-                              <span class="text-xs font-semibold text-[rgba(0,0,0,0.58)]">
-                                GW {match.week}
-                              </span>
-                              <span class="text-xs font-semibold">
-                                INVINCIBLES {match.gf} - {match.ga} {Map.get(
-                                  match,
-                                  :opponent_short,
-                                  "OPPONENT"
-                                )}
-                              </span>
+                              <%!-- Slot buttons row (only when draftable) --%>
+                              <%= if not already_drafted and not Enum.empty?(compatible_slots) do %>
+                                <div class="flex flex-wrap gap-1 pl-11">
+                                  <%= for slot <- compatible_slots do %>
+                                    <button
+                                      phx-click="draft_player"
+                                      phx-value-appearance-id={app.id}
+                                      phx-value-position-key={slot}
+                                      class="bg-[#00754A] hover:bg-[#006241] active:scale-95 text-white font-bold text-[9px] px-2 py-0.5 rounded-full tracking-wider uppercase transition-all duration-100"
+                                    >
+                                      {elem(slot_labels[slot], 0)}
+                                    </button>
+                                  <% end %>
+                                </div>
+                              <% end %>
                             </div>
-                            <span class={[
-                              "text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-black/5",
-                              result_badge_color
-                            ]}>
-                              {match.result}
-                            </span>
-                          </div>
-                        <% end %>
+                          <% end %>
+                        </div>
                       <% end %>
                     </div>
+                  <% end %>
 
-                    <div class="mt-4 pt-4 border-t border-[rgba(0,0,0,0.08)] flex flex-col gap-2">
-                      <div class="flex justify-between text-xs text-[rgba(0,0,0,0.58)]">
-                        <span>Progress</span>
-                        <span class="font-bold text-[rgba(0,0,0,0.87)]">
-                          {@season_record.week} / 38 Gameweeks
+                  <%= if @step == :squad_complete do %>
+                    <div class="text-center py-6">
+                      <div class="w-12 h-12 mx-auto bg-[#edebe9] border border-[rgba(0,0,0,0.08)] rounded-[12px] flex items-center justify-center text-xl mb-4">
+                        ⚽
+                      </div>
+                      <h2 class="text-lg font-bold tracking-tight mb-2 text-[#006241]">
+                        Squad is Complete!
+                      </h2>
+                      <p class="text-xs text-[rgba(0,0,0,0.58)] leading-relaxed mb-6">
+                        You have filled all 11 slots. Ready to simulate the 38-game season?
+                      </p>
+                      <button
+                        phx-click="simulate_season"
+                        class="w-full btn-starbucks btn-starbucks-filled text-sm"
+                      >
+                        START SIMULATION RUN
+                      </button>
+                    </div>
+                  <% end %>
+
+                  <%= if @step == :simulating do %>
+                    <div>
+                      <div class="flex items-center justify-between border-b border-[rgba(0,0,0,0.08)] pb-3 mb-4">
+                        <span class="text-[11px] font-semibold text-[rgba(0,0,0,0.58)] uppercase tracking-[0.6px]">
+                          Simulating Season
+                          <%= if @sim_results && Map.get(@sim_results, :season_label) do %>
+                            ({@sim_results.season_label})
+                          <% end %>
+                        </span>
+                        <span class="text-[#00754A] text-[10px] font-bold uppercase tracking-[0.6px]">
+                          LIVE MATCHDAY
                         </span>
                       </div>
-                      <div class="w-full bg-[#edebe9] rounded-full h-1 overflow-hidden">
-                        <div
-                          class="bg-[#00754A] h-1 rounded-full transition-all duration-150"
-                          style={"width: #{@season_record.week / 38 * 100}%"}
+
+                      <%!-- Simulation Matchday Logs --%>
+                      <div class="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-1">
+                        <%= for match <- Enum.reverse(@sim_results.matches) do %>
+                          <%= if match.week < @season_record.week + 1 do %>
+                            <% result_badge_color =
+                              cond do
+                                match.result == :win -> "text-[#00754A]"
+                                match.result == :draw -> "text-[#cba258]"
+                                true -> "text-[#c82014]"
+                              end %>
+                            <div class="flex items-center justify-between border border-[rgba(0,0,0,0.08)] bg-white p-3 rounded-lg shadow-sm text-[rgba(0,0,0,0.87)]">
+                              <div class="flex items-center gap-2">
+                                <span class="text-xs font-semibold text-[rgba(0,0,0,0.58)]">
+                                  GW {match.week}
+                                </span>
+                                <span class="text-xs font-semibold">
+                                  INVINCIBLES {match.gf} - {match.ga} {Map.get(
+                                    match,
+                                    :opponent_short,
+                                    "OPPONENT"
+                                  )}
+                                </span>
+                              </div>
+                              <span class={[
+                                "text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-black/5",
+                                result_badge_color
+                              ]}>
+                                {match.result}
+                              </span>
+                            </div>
+                          <% end %>
+                        <% end %>
+                      </div>
+
+                      <div class="mt-4 pt-4 border-t border-[rgba(0,0,0,0.08)] flex flex-col gap-2">
+                        <div class="flex justify-between text-xs text-[rgba(0,0,0,0.58)]">
+                          <span>Progress</span>
+                          <span class="font-bold text-[rgba(0,0,0,0.87)]">
+                            {@season_record.week} / 38 Gameweeks
+                          </span>
+                        </div>
+                        <div class="w-full bg-[#edebe9] rounded-full h-1 overflow-hidden">
+                          <div
+                            class="bg-[#00754A] h-1 rounded-full transition-all duration-150"
+                            style={"width: #{@season_record.week / 38 * 100}%"}
+                          >
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  <% end %>
+                </div>
+              <% else %>
+                <%!-- Relocated Standings Card --%>
+                <% pts = @season_record.wins * 3 + @season_record.draws
+                gd = @season_record.gf - @season_record.ga
+                gd_str = if gd >= 0, do: "+#{gd}", else: "#{gd}"
+                is_invincible = @season_record.losses == 0
+                is_perfect = @season_record.wins == 38
+                funny_quote = get_funny_quote(@season_record)
+
+                first_loss =
+                  if @sim_results,
+                    do: Enum.find(@sim_results.matches, &(&1.result == :loss)),
+                    else: nil
+
+                share_url = if @active_share, do: url(~p"/share/#{@active_share.id}"), else: nil %>
+
+                <div
+                  id="standings-table-card"
+                  class="card-starbucks overflow-hidden flex flex-col shadow-md"
+                >
+                  <%!-- Header banner --%>
+                  <div class={[
+                    "rounded-t-xl px-6 py-4 flex items-center justify-between",
+                    cond do
+                      is_perfect -> "bg-gradient-to-r from-[#cba258] to-[#f0d47c]"
+                      is_invincible -> "bg-gradient-to-r from-[#006241] to-[#00754A]"
+                      true -> "bg-gradient-to-r from-[#1a1a1a] to-[#333]"
+                    end
+                  ]}>
+                    <div>
+                      <div class="text-[10px] font-bold uppercase tracking-[1.2px] text-white/70 mb-0.5">
+                        {if @step == :hall_of_fame, do: "Golden Campaign", else: "Season Complete"}
+                        <%= if @sim_results && Map.get(@sim_results, :season_label) do %>
+                          · {@sim_results.season_label}
+                        <% end %>
+                      </div>
+                      <div class="text-white font-black text-xl sm:text-2xl tracking-tight leading-none">
+                        {cond do
+                          is_perfect -> "PERFECT SEASON"
+                          is_invincible -> "INVINCIBLES"
+                          true -> "FINAL RECORD"
+                        end}
+                      </div>
+                    </div>
+                    <div class="text-right">
+                      <div class="text-white/60 text-[10px] uppercase tracking-wider">Points</div>
+                      <div class="text-white font-black text-2xl sm:text-3xl leading-none">{pts}</div>
+                    </div>
+                  </div>
+
+                  <%!-- Stats pillars --%>
+                  <div class="px-6 py-5 flex-1 flex flex-col gap-4">
+                    <div class="grid grid-cols-5 gap-2 text-center">
+                      <div class="flex flex-col gap-1">
+                        <span class="text-lg sm:text-[22px] font-black text-[#006241] leading-none">
+                          {@season_record.wins}
+                        </span>
+                        <span class="text-[9px] font-bold uppercase tracking-wider text-[rgba(0,0,0,0.4)]">
+                          Won
+                        </span>
+                      </div>
+                      <div class="flex flex-col gap-1">
+                        <span class="text-lg sm:text-[22px] font-black text-[rgba(0,0,0,0.5)] leading-none">
+                          {@season_record.draws}
+                        </span>
+                        <span class="text-[9px] font-bold uppercase tracking-wider text-[rgba(0,0,0,0.4)]">
+                          Drawn
+                        </span>
+                      </div>
+                      <div class="flex flex-col gap-1">
+                        <span class={[
+                          "text-lg sm:text-[22px] font-black leading-none",
+                          if(@season_record.losses == 0, do: "text-[#006241]", else: "text-[#c82014]")
+                        ]}>
+                          {@season_record.losses}
+                        </span>
+                        <span class="text-[9px] font-bold uppercase tracking-wider text-[rgba(0,0,0,0.4)]">
+                          Lost
+                        </span>
+                      </div>
+                      <div class="flex flex-col gap-1">
+                        <span class="text-lg sm:text-[22px] font-black text-[rgba(0,0,0,0.75)] leading-none">
+                          {@season_record.gf}
+                        </span>
+                        <span class="text-[9px] font-bold uppercase tracking-wider text-[rgba(0,0,0,0.4)]">
+                          GF
+                        </span>
+                      </div>
+                      <div class="flex flex-col gap-1">
+                        <span class={[
+                          "text-lg sm:text-[22px] font-black leading-none",
+                          if(gd >= 0, do: "text-[#00754A]", else: "text-[#c82014]")
+                        ]}>
+                          {gd_str}
+                        </span>
+                        <span class="text-[9px] font-bold uppercase tracking-wider text-[rgba(0,0,0,0.4)]">
+                          GD
+                        </span>
+                      </div>
+                    </div>
+
+                    <%!-- First loss callout --%>
+                    <%= if first_loss do %>
+                      <div class="text-[11px] text-[rgba(0,0,0,0.6)] font-semibold text-center flex items-center justify-center gap-1.5 bg-[rgba(200,32,20,0.04)] border border-[rgba(200,32,20,0.08)] py-1.5 px-3 rounded-lg">
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#c82014] flex-shrink-0 animate-pulse">
+                        </span>
+                        <span>
+                          First loss at GW {first_loss.week} — {first_loss.gf}–{first_loss.ga} vs {Map.get(
+                            first_loss,
+                            :opponent_short,
+                            "OPP"
+                          )}
+                        </span>
+                      </div>
+                    <% end %>
+
+                    <%!-- Funny quote --%>
+                    <div class={[
+                      "text-center text-xs sm:text-sm leading-relaxed italic px-2 my-2 py-3 border-y border-[rgba(0,0,0,0.05)]",
+                      cond do
+                        is_perfect -> "text-[#7a5c1e] font-semibold"
+                        is_invincible -> "text-[#006241] font-semibold"
+                        true -> "text-[rgba(0,0,0,0.78)] font-medium"
+                      end
+                    ]}>
+                      "{funny_quote}"
+                    </div>
+
+                    <%!-- Play Again button --%>
+                    <button
+                      phx-click="start_game"
+                      class="w-full btn-starbucks btn-starbucks-filled text-sm py-3 font-bold uppercase tracking-wider"
+                    >
+                      Play Again
+                    </button>
+                  </div>
+
+                  <%!-- Footer actions --%>
+                  <%= if share_url do %>
+                    <div class="bg-[#f7f7f5] border-t border-[rgba(0,0,0,0.08)] px-5 py-4 flex flex-col gap-3">
+                      <div class="flex items-center justify-between text-[10px] text-[rgba(0,0,0,0.5)] font-semibold uppercase tracking-[0.4px]">
+                        <span>GA: {@season_record.ga} · Pts: {pts}</span>
+                        <%= if @sim_results && Map.get(@sim_results, :season_label) do %>
+                          <span>Season: {@sim_results.season_label}</span>
+                        <% end %>
+                      </div>
+                      <div class="grid grid-cols-2 gap-2">
+                        <button
+                          id="share-twitter"
+                          phx-hook="ShareButton"
+                          data-wins={@season_record.wins}
+                          data-draws={@season_record.draws}
+                          data-losses={@season_record.losses}
+                          data-points={pts}
+                          data-season={
+                            if @sim_results, do: Map.get(@sim_results, :season_label, ""), else: ""
+                          }
+                          data-quote={funny_quote}
+                          data-share-url={share_url}
+                          class="btn-starbucks btn-starbucks-black text-[10px] sm:text-xs py-2 px-2.5 flex items-center justify-center gap-1.5 whitespace-nowrap shadow-sm font-bold tracking-wider"
                         >
-                        </div>
+                          <svg class="w-3.5 h-3.5 fill-current text-white" viewBox="0 0 24 24">
+                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                          </svg>
+                          SHARE TO TWITTER
+                        </button>
+                        <button
+                          id="share-whatsapp"
+                          phx-hook="WhatsAppShareButton"
+                          data-wins={@season_record.wins}
+                          data-draws={@season_record.draws}
+                          data-losses={@season_record.losses}
+                          data-points={pts}
+                          data-season={
+                            if @sim_results, do: Map.get(@sim_results, :season_label, ""), else: ""
+                          }
+                          data-quote={funny_quote}
+                          data-share-url={share_url}
+                          class="bg-[#25D366] hover:bg-[#20ba5a] text-white font-extrabold text-[10px] sm:text-xs py-2 px-2.5 rounded-[50px] transition-all flex items-center justify-center gap-1.5 whitespace-nowrap shadow-sm tracking-wider"
+                        >
+                          <svg class="w-3.5 h-3.5 fill-current text-white" viewBox="0 0 24 24">
+                            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.488 1.459 5.407 1.461 5.432.003 9.85-4.413 9.854-9.847.002-2.63-1.023-5.101-2.887-6.969C17.159 1.932 14.686.907 12.06.907c-5.434 0-9.852 4.414-9.855 9.848-.002 1.81.472 3.58 1.375 5.143l-.975 3.565 3.65-.958zm10.742-5.403c-.3-.15-1.774-.875-2.046-.975-.272-.1-.471-.15-.669.15-.198.3-.765.976-.939 1.176-.173.199-.347.224-.648.075-1.037-.517-1.829-.916-2.543-1.52-.356-.302-.569-.646-.669-.896-.099-.25-.01-.385.088-.482.089-.088.199-.232.298-.348.099-.117.133-.199.199-.332.066-.133.033-.25-.017-.35-.05-.1-1.774-4.275-2.046-4.925-.265-.638-.535-.55-.669-.557l-.57-.008c-.198 0-.52.075-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.774-.725 2.022-1.424.248-.699.248-1.299.174-1.424-.075-.125-.272-.199-.57-.349z" />
+                          </svg>
+                          SHARE TO WHATSAPP
+                        </button>
                       </div>
                     </div>
-                  </div>
-                <% end %>
+                  <% end %>
+                </div>
 
-                <%= if @step == :game_over do %>
-                  <div class="flex flex-col gap-6">
-                    <div class="text-center py-4 border-b border-[rgba(0,0,0,0.08)] pb-6">
-                      <div class="w-14 h-14 mx-auto bg-[#edebe9] border border-[rgba(0,0,0,0.08)] rounded-full flex items-center justify-center mb-4 shadow-sm">
-                        <.icon name="hero-x-circle" class="w-6 h-6 text-[#c82014]" />
-                      </div>
-                      <h2 class="text-xl font-bold tracking-tight mb-2 text-[#006241]">
-                        Season Complete
-                      </h2>
-
-                      <% total_losses = @season_record.losses %>
-                      <p class="text-xs text-[rgba(0,0,0,0.58)] leading-relaxed mb-6">
-                        <%= cond do %>
-                          <% total_losses == 1 -> %>
-                            Just 1 defeat all season! You were
-                            <span class="font-semibold text-[#cba258]">agonizingly close</span>
-                            to going unbeaten.
-                          <% total_losses <= 3 -> %>
-                            Only {total_losses} defeats. A
-                            <span class="font-semibold text-[rgba(0,0,0,0.87)]">near-invincible</span>
-                            campaign.
-                          <% total_losses <= 8 -> %>
-                            {total_losses} defeats — a solid season, but the Invincibles dream needs more.
-                          <% true -> %>
-                            {total_losses} defeats. Your squad needs reinforcements!
-                        <% end %>
-                      </p>
-
-                      <button
-                        phx-click="start_game"
-                        class="w-full btn-starbucks btn-starbucks-filled text-sm"
-                      >
-                        Try Again
-                      </button>
+                <%!-- Match History (Desktop card) --%>
+                <%= if @sim_results && @sim_results.matches != [] do %>
+                  <div class="hidden lg:block card-starbucks p-6 flex flex-col gap-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-[rgba(0,0,0,0.08)]">
+                      <span class="text-[11px] font-bold text-[rgba(0,0,0,0.4)] uppercase tracking-[0.6px]">
+                        Match History
+                      </span>
                     </div>
-
-                    <%= if @sim_results && @sim_results.matches != [] do %>
-                      <div class="hidden lg:block">
-                        <div class="flex items-center justify-between pb-3 mb-3 border-b border-[rgba(0,0,0,0.08)]">
-                          <span class="text-[11px] font-bold text-[rgba(0,0,0,0.4)] uppercase tracking-[0.6px]">
-                            Match History
+                    <div class="flex flex-col gap-2 max-h-[260px] overflow-y-auto pr-1">
+                      <%= for match <- Enum.reverse(@sim_results.matches) do %>
+                        <% result_badge_color =
+                          cond do
+                            match.result == :win -> "text-[#00754A]"
+                            match.result == :draw -> "text-[#cba258]"
+                            true -> "text-[#c82014]"
+                          end %>
+                        <div class="flex items-center justify-between border border-[rgba(0,0,0,0.08)] bg-white p-3 rounded-lg shadow-sm text-[rgba(0,0,0,0.87)]">
+                          <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold text-[rgba(0,0,0,0.58)]">
+                              GW {match.week}
+                            </span>
+                            <span class="text-xs font-semibold">
+                              INVINCIBLES {match.gf} - {match.ga} {Map.get(
+                                match,
+                                :opponent_short,
+                                "OPPONENT"
+                              )}
+                            </span>
+                          </div>
+                          <span class={[
+                            "text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-black/5",
+                            result_badge_color
+                          ]}>
+                            {match.result}
                           </span>
                         </div>
-                        <div class="flex flex-col gap-2 max-h-[260px] overflow-y-auto pr-1">
-                          <%= for match <- Enum.reverse(@sim_results.matches) do %>
-                            <% result_badge_color =
-                              cond do
-                                match.result == :win -> "text-[#00754A]"
-                                match.result == :draw -> "text-[#cba258]"
-                                true -> "text-[#c82014]"
-                              end %>
-                            <div class="flex items-center justify-between border border-[rgba(0,0,0,0.08)] bg-white p-3 rounded-lg shadow-sm text-[rgba(0,0,0,0.87)]">
-                              <div class="flex items-center gap-2">
-                                <span class="text-xs font-semibold text-[rgba(0,0,0,0.58)]">
-                                  GW {match.week}
-                                </span>
-                                <span class="text-xs font-semibold">
-                                  INVINCIBLES {match.gf} - {match.ga} {Map.get(
-                                    match,
-                                    :opponent_short,
-                                    "OPPONENT"
-                                  )}
-                                </span>
-                              </div>
-                              <span class={[
-                                "text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-black/5",
-                                result_badge_color
-                              ]}>
-                                {match.result}
-                              </span>
-                            </div>
-                          <% end %>
-                        </div>
-                      </div>
-                    <% end %>
-                  </div>
-                <% end %>
-
-                <%= if @step == :hall_of_fame do %>
-                  <div class="flex flex-col gap-6">
-                    <div class="text-center py-4 border-b border-[rgba(0,0,0,0.08)] pb-6">
-                      <div class="w-14 h-14 mx-auto bg-[#faf6ee] border border-[#dfc49d] rounded-full flex items-center justify-center mb-4 shadow-sm">
-                        <.icon name="hero-star" class="w-6 h-6 text-[#cba258]" />
-                      </div>
-                      <h2 class="text-xl font-bold tracking-tight mb-2 text-[#cba258]">
-                        {if @season_record.wins == 38, do: "Golden Trophy", else: "The Unbeaten"}
-                      </h2>
-                      <p class="text-xs text-[rgba(0,0,0,0.58)] leading-relaxed mb-6">
-                        <%= if @season_record.wins == 38 do %>
-                          A perfect 38-0-0! Every single game won. Your names are written in golden letters in the Hall of Fame.
-                        <% else %>
-                          You went the entire season unbeaten! A legendary campaign worthy of the history books.
-                        <% end %>
-                      </p>
-
-                      <button
-                        phx-click="start_game"
-                        class="w-full btn-starbucks btn-starbucks-filled text-sm"
-                      >
-                        Play Another Run
-                      </button>
+                      <% end %>
                     </div>
-
-                    <%= if @sim_results && @sim_results.matches != [] do %>
-                      <div class="hidden lg:block">
-                        <div class="flex items-center justify-between pb-3 mb-3 border-b border-[rgba(0,0,0,0.08)]">
-                          <span class="text-[11px] font-bold text-[rgba(0,0,0,0.4)] uppercase tracking-[0.6px]">
-                            Match History
-                          </span>
-                        </div>
-                        <div class="flex flex-col gap-2 max-h-[260px] overflow-y-auto pr-1">
-                          <%= for match <- Enum.reverse(@sim_results.matches) do %>
-                            <% result_badge_color =
-                              cond do
-                                match.result == :win -> "text-[#00754A]"
-                                match.result == :draw -> "text-[#cba258]"
-                                true -> "text-[#c82014]"
-                              end %>
-                            <div class="flex items-center justify-between border border-[rgba(0,0,0,0.08)] bg-white p-3 rounded-lg shadow-sm text-[rgba(0,0,0,0.87)]">
-                              <div class="flex items-center gap-2">
-                                <span class="text-xs font-semibold text-[rgba(0,0,0,0.58)]">
-                                  GW {match.week}
-                                </span>
-                                <span class="text-xs font-semibold">
-                                  INVINCIBLES {match.gf} - {match.ga} {Map.get(
-                                    match,
-                                    :opponent_short,
-                                    "OPPONENT"
-                                  )}
-                                </span>
-                              </div>
-                              <span class={[
-                                "text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-black/5",
-                                result_badge_color
-                              ]}>
-                                {match.result}
-                              </span>
-                            </div>
-                          <% end %>
-                        </div>
-                      </div>
-                    <% end %>
                   </div>
                 <% end %>
-              </div>
+              <% end %>
             </div>
           </main>
           
