@@ -363,6 +363,9 @@ defmodule InvinciblesWeb.GameLive do
       points >= 38 ->
         "You reached the safety threshold, but Sam Allardyce is confident he could have kept this team up with 10 matches to spare."
 
+      points >= 20 ->
+        "You finished with #{points} points. Relegation confirmed. Even Roy Hodgson couldn't guide this squad to safety."
+
       true ->
         "Dangerously close to matching Derby County's 2007/08 record of 11 points! Time to overhaul the squad."
     end
