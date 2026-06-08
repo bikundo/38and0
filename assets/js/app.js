@@ -339,6 +339,69 @@ const Hooks = {
         this._originalText = originalText;
       });
 
+      const getTwitterLength = (str, urlToReplace) => {
+        let temp = str;
+        if (urlToReplace) {
+          let isLocal = false;
+          try {
+            const parsed = new URL(urlToReplace);
+            const hostname = parsed.hostname;
+            const isIp = /^[0-9.]+$/.test(hostname) || hostname.includes(":");
+            if (!hostname.includes(".") || hostname.endsWith(".local") || isIp) {
+              isLocal = true;
+            }
+          } catch (e) {
+            // fallback
+          }
+
+          if (!isLocal) {
+            temp = temp.split(urlToReplace).join("a".repeat(23));
+          }
+        }
+        temp = temp.normalize("NFC");
+        let length = 0;
+        for (const char of temp) {
+          const codePoint = char.codePointAt(0);
+          if (
+            (codePoint >= 0 && codePoint <= 4351) ||
+            (codePoint >= 8192 && codePoint <= 8205) ||
+            (codePoint >= 8208 && codePoint <= 8223) ||
+            (codePoint >= 8240 && codePoint <= 8286)
+          ) {
+            length += 1;
+          } else {
+            length += 2;
+          }
+        }
+        return length;
+      };
+
+      const truncateToTwitterLength = (str, maxLen) => {
+        let length = 0;
+        let result = "";
+        for (const char of str) {
+          const codePoint = char.codePointAt(0);
+          let charWeight = 1;
+          if (
+            (codePoint >= 0 && codePoint <= 4351) ||
+            (codePoint >= 8192 && codePoint <= 8205) ||
+            (codePoint >= 8208 && codePoint <= 8223) ||
+            (codePoint >= 8240 && codePoint <= 8286)
+          ) {
+            charWeight = 1;
+          } else {
+            charWeight = 2;
+          }
+          
+          if (length + charWeight > maxLen) {
+            break;
+          }
+          length += charWeight;
+          result += char;
+        }
+        return result;
+      };
+
       this.handleEvent("share_url", ({ url }) => {
         this.el.disabled = false;
         if (this._originalText) {
@@ -352,11 +415,26 @@ const Hooks = {
         const season = this.el.dataset.season ? ` (${this.el.dataset.season})` : "";
         const quote = this.el.dataset.quote || "";
 
-        let text = `Can you build a squad and go 38-0-0? Check out my Invincibles campaign!\n\nLink: ${url}\n\nRecord: ${wins}W - ${draws}D - ${losses}L | ${points} Pts${season} ⚽🏆`;
+        const baseHeader = `Can you build a squad and go 38-0-0? Check out my Invincibles campaign!\n\nLink: ${url}\n\nRecord: ${wins}W - ${draws}D - ${losses}L | ${points} Pts${season} ⚽🏆`;
+        const footer = `\n\n#InvinciblesDraft`;
+        let text = baseHeader;
+
         if (quote) {
-          text += `\n\n"${quote}"`;
+          const baseTwitterLength = getTwitterLength(baseHeader + footer, url);
+          const maxQuoteTwitterLength = 280 - baseTwitterLength - 4; // 4 for newlines and quotes
+
+          if (maxQuoteTwitterLength > 3) {
+            const quoteTwitterLength = getTwitterLength(quote);
+            if (quoteTwitterLength > maxQuoteTwitterLength) {
+              const targetLength = maxQuoteTwitterLength - 3; // 3 for "..."
+              const truncated = truncateToTwitterLength(quote, targetLength);
+              text += `\n\n"${truncated}..."`;
+            } else {
+              text += `\n\n"${quote}"`;
+            }
+          }
         }
-        text += `\n\n#InvinciblesDraft`;
+        text += footer;
 
         const tweetText = encodeURIComponent(text);
         const twitterUrl = `https://twitter.com/intent/tweet?text=${tweetText}`;

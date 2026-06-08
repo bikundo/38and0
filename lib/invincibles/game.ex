@@ -21,36 +21,66 @@ defmodule Invincibles.Game do
       "Tottenham Hotspur"
     ]
 
-    # 1. Fetch a random appearance from the DB to get a valid club + season (Top 6 only)
-    random_app =
-      from(a in Appearance,
-        join: c in assoc(a, :club),
-        where: c.name in ^top_6_names,
-        order_by: fragment("RANDOM()"),
-        limit: 1,
-        preload: [:club]
-      )
-      |> Repo.one()
+    # Bias: 70% chance of choosing a Top 6 club, 30% chance of any club.
+    # To keep draft quality high, we only select club/seasons with at least 5 players of OVR >= 80.
+    use_top_6? = :rand.uniform(100) <= 70
 
-    case random_app do
+    query =
+      if use_top_6? do
+        from(a in Appearance,
+          join: c in assoc(a, :club),
+          where: a.ovr >= 80 and c.name in ^top_6_names,
+          group_by: [a.club_id, a.season, c.id],
+          having: count(a.id) >= 5,
+          select: {a.club_id, a.season},
+          order_by: fragment("RANDOM()"),
+          limit: 1
+        )
+      else
+        from(a in Appearance,
+          join: c in assoc(a, :club),
+          where: a.ovr >= 80,
+          group_by: [a.club_id, a.season, c.id],
+          having: count(a.id) >= 5,
+          select: {a.club_id, a.season},
+          order_by: fragment("RANDOM()"),
+          limit: 1
+        )
+      end
+
+    case Repo.one(query) do
       nil ->
-        {:error, :no_data}
-
-      app ->
-        club = app.club
-        season = app.season
-
-        # 2. Fetch appearances for that club and season (OVR >= 80 only, big-name players)
-        appearances =
+        # Fallback to unrestricted search if query is empty or db not ready
+        fallback_query =
           from(a in Appearance,
-            where: a.club_id == ^club.id and a.season == ^season and a.ovr >= 80,
-            order_by: a.ovr,
-            preload: [:player, :club]
+            join: c in assoc(a, :club),
+            order_by: fragment("RANDOM()"),
+            limit: 1,
+            preload: [:club]
           )
-          |> Repo.all()
 
-        {:ok, club, season, appearances}
+        case Repo.one(fallback_query) do
+          nil -> {:error, :no_data}
+          app -> fetch_appearances_for_spin(app.club, app.season)
+        end
+
+      {club_id, season} ->
+        club = Repo.get!(Invincibles.Game.Club, club_id)
+        fetch_appearances_for_spin(club, season)
     end
+  end
+
+  defp fetch_appearances_for_spin(club, season) do
+    # Fetch appearances for that club and season (OVR >= 80 only, big-name players)
+    appearances =
+      from(a in Appearance,
+        where: a.club_id == ^club.id and a.season == ^season and a.ovr >= 80,
+        order_by: a.ovr,
+        preload: [:player, :club]
+      )
+      |> Repo.all()
+
+    {:ok, club, season, appearances}
   end
 
   @doc """
