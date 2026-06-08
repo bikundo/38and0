@@ -940,7 +940,7 @@ defmodule InvinciblesWeb.GameLive do
                         <div class="text-xs text-[rgba(0,0,0,0.6)] font-semibold text-center mt-4 mb-2 flex items-center justify-center gap-1.5">
                           <span class="w-1.5 h-1.5 rounded-full bg-[#c82014]"></span>
                           <span>
-                            First loss at Week {first_loss.week} — {first_loss.gf}–{first_loss.ga} vs {Map.get(
+                            First loss at GW {first_loss.week} — {first_loss.gf}–{first_loss.ga} vs {Map.get(
                               first_loss,
                               :opponent_short,
                               "OPP"
@@ -1012,7 +1012,7 @@ defmodule InvinciblesWeb.GameLive do
                       <div class="flex items-center justify-between border border-[rgba(0,0,0,0.08)] bg-white p-3 rounded-lg shadow-sm text-[rgba(0,0,0,0.87)]">
                         <div class="flex items-center gap-2">
                           <span class="text-xs font-semibold text-[rgba(0,0,0,0.58)]">
-                            W{match.week}
+                            GW {match.week}
                           </span>
                           <span class="text-xs font-semibold">
                             INVINCIBLES {match.gf} - {match.ga} {Map.get(
@@ -1352,7 +1352,7 @@ defmodule InvinciblesWeb.GameLive do
                           <div class="flex items-center justify-between border border-[rgba(0,0,0,0.08)] bg-white p-3 rounded-lg shadow-sm text-[rgba(0,0,0,0.87)]">
                             <div class="flex items-center gap-2">
                               <span class="text-xs font-semibold text-[rgba(0,0,0,0.58)]">
-                                W{match.week}
+                                GW {match.week}
                               </span>
                               <span class="text-xs font-semibold">
                                 INVINCIBLES {match.gf} - {match.ga} {Map.get(
@@ -1377,7 +1377,7 @@ defmodule InvinciblesWeb.GameLive do
                       <div class="flex justify-between text-xs text-[rgba(0,0,0,0.58)]">
                         <span>Progress</span>
                         <span class="font-bold text-[rgba(0,0,0,0.87)]">
-                          {@season_record.week} / 38 Weeks
+                          {@season_record.week} / 38 Gameweeks
                         </span>
                       </div>
                       <div class="w-full bg-[#edebe9] rounded-full h-1 overflow-hidden">
@@ -1445,7 +1445,7 @@ defmodule InvinciblesWeb.GameLive do
                             <div class="flex items-center justify-between border border-[rgba(0,0,0,0.08)] bg-white p-3 rounded-lg shadow-sm text-[rgba(0,0,0,0.87)]">
                               <div class="flex items-center gap-2">
                                 <span class="text-xs font-semibold text-[rgba(0,0,0,0.58)]">
-                                  W{match.week}
+                                  GW {match.week}
                                 </span>
                                 <span class="text-xs font-semibold">
                                   INVINCIBLES {match.gf} - {match.ga} {Map.get(
@@ -1512,7 +1512,7 @@ defmodule InvinciblesWeb.GameLive do
                             <div class="flex items-center justify-between border border-[rgba(0,0,0,0.08)] bg-white p-3 rounded-lg shadow-sm text-[rgba(0,0,0,0.87)]">
                               <div class="flex items-center gap-2">
                                 <span class="text-xs font-semibold text-[rgba(0,0,0,0.58)]">
-                                  W{match.week}
+                                  GW {match.week}
                                 </span>
                                 <span class="text-xs font-semibold">
                                   INVINCIBLES {match.gf} - {match.ga} {Map.get(

@@ -105,7 +105,7 @@ defmodule InvinciblesWeb.Layouts do
             </div>
             <%= if @record.week > 0 do %>
               <span class="bg-[#00754A] text-white text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ml-1">
-                Week {@record.week}
+                GW {@record.week}
               </span>
             <% end %>
           <% end %>
