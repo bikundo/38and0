@@ -11,7 +11,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Debug Secrets Presence
+      - name: Validate Secrets Presence
         run: |
           if [ -z "${{ secrets.VPS_HOST }}" ]; then 
             echo "VPS_HOST is missing/empty!"
