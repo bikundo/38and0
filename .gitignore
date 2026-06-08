@@ -35,3 +35,6 @@ invincibles-*.tar
 npm-debug.log
 /assets/node_modules/
 
+# DuckDB database files
+*.duckdb
+
