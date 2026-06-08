@@ -97,13 +97,14 @@ jobs:
             
             # Copy configuration files to their system paths
             cp /tmp/deployment/invincibles.service /etc/systemd/system/invincibles.service
-            cp /tmp/deployment/nginx.conf /etc/nginx/sites-available/invincibles
-            rm -rf /tmp/deployment
             
-            # Symlink Nginx configuration if not already present
-            if [ ! -f /etc/nginx/sites-enabled/invincibles ]; then
+            # Copy and link Nginx config ONLY if it does not already exist (to preserve SSL config)
+            if [ ! -f /etc/nginx/sites-available/invincibles ]; then
+              cp /tmp/deployment/nginx.conf /etc/nginx/sites-available/invincibles
               ln -s /etc/nginx/sites-available/invincibles /etc/nginx/sites-enabled/invincibles
             fi
+            
+            rm -rf /tmp/deployment
             
             # Reload Systemd & Restart service
             systemctl daemon-reload
