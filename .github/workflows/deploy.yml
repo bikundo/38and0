@@ -1,0 +1,91 @@
+name: Deploy Application
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir & Erlang
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: '1.15.7' # Matches project Elixir version
+          otp-version: '26.1.2'
+
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: deps
+          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-
+
+      - name: Install dependencies
+        run: mix deps.get --only prod
+
+      - name: Compile Application
+        run: MIX_ENV=prod mix compile
+
+      - name: Build assets
+        run: MIX_ENV=prod mix assets.deploy
+
+      - name: Build Release
+        run: MIX_ENV=prod mix release
+
+      - name: Create Tarball
+        run: tar -czf release.tar.gz -C _build/prod/rel/invincibles .
+
+      - name: Copy Release and Configs to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "release.tar.gz,deployment/invincibles.service,deployment/nginx.conf"
+          target: "/tmp/"
+
+      - name: Extract & Restart via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            # Ensure target directories exist
+            mkdir -p /var/www/invincibles
+            
+            # Extract application
+            tar -xzf /tmp/release.tar.gz -C /var/www/invincibles
+            rm /tmp/release.tar.gz
+            
+            # Setup environment variables file
+            echo "PORT=4000" > /var/www/invincibles/.env
+            echo "PHX_SERVER=true" >> /var/www/invincibles/.env
+            echo "PHX_HOST=${{ secrets.PHX_HOST }}" >> /var/www/invincibles/.env
+            echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> /var/www/invincibles/.env
+            echo "SECRET_KEY_BASE=${{ secrets.SECRET_KEY_BASE }}" >> /var/www/invincibles/.env
+            
+            # Run Migrations
+            /var/www/invincibles/bin/invincibles eval "Invincibles.Release.migrate"
+            
+            # Copy configuration files to their system paths
+            cp /tmp/deployment/invincibles.service /etc/systemd/system/invincibles.service
+            cp /tmp/deployment/nginx.conf /etc/nginx/sites-available/invincibles
+            rm -rf /tmp/deployment
+            
+            # Symlink Nginx configuration if not already present
+            if [ ! -f /etc/nginx/sites-enabled/invincibles ]; then
+              ln -s /etc/nginx/sites-available/invincibles /etc/nginx/sites-enabled/invincibles
+            fi
+            
+            # Reload Systemd & Restart service
+            systemctl daemon-reload
+            systemctl enable invincibles
+            systemctl restart invincibles
+            
+            # Test and restart Nginx
+            nginx -t && systemctl reload nginx

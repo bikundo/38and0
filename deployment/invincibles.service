@@ -1,0 +1,18 @@
+[Unit]
+Description=Invincibles Phoenix Application
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/var/www/invincibles
+EnvironmentFile=/var/www/invincibles/.env
+ExecStart=/var/www/invincibles/bin/invincibles start
+ExecStop=/var/www/invincibles/bin/invincibles stop
+Restart=on-failure
+RestartSec=5
+SyslogIdentifier=invincibles
+
+[Install]
+WantedBy=multi-user.target
