@@ -526,25 +526,26 @@ defmodule Invincibles.Game do
     two_days_ago_naive = NaiveDateTime.utc_now() |> NaiveDateTime.add(-172_800, :second)
 
     from(s in Share,
-      where: s.inserted_at > ^two_days_ago_naive
+      where: s.inserted_at > ^two_days_ago_naive,
+      order_by: [
+        desc:
+          fragment(
+            "coalesce((?->>'wins')::integer, 0) * 3 + coalesce((?->>'draws')::integer, 0)",
+            s.season_record,
+            s.season_record
+          ),
+        asc: fragment("coalesce((?->>'losses')::integer, 0)", s.season_record),
+        desc:
+          fragment(
+            "coalesce((?->>'gf')::integer, 0) - coalesce((?->>'ga')::integer, 0)",
+            s.season_record,
+            s.season_record
+          ),
+        desc: fragment("coalesce((?->>'wins')::integer, 0)", s.season_record),
+        desc: s.inserted_at
+      ],
+      limit: 20
     )
     |> Repo.all()
-    |> Enum.sort_by(fn share ->
-      wins = Map.get(share.season_record, "wins") || Map.get(share.season_record, :wins) || 0
-      draws = Map.get(share.season_record, "draws") || Map.get(share.season_record, :draws) || 0
-
-      losses =
-        Map.get(share.season_record, "losses") || Map.get(share.season_record, :losses) || 0
-
-      gf = Map.get(share.season_record, "gf") || Map.get(share.season_record, :gf) || 0
-      ga = Map.get(share.season_record, "ga") || Map.get(share.season_record, :ga) || 0
-      points = wins * 3 + draws
-      gd = gf - ga
-
-      inserted_at_seconds =
-        DateTime.from_naive!(share.inserted_at, "Etc/UTC") |> DateTime.to_unix()
-
-      {-points, losses, -gd, -wins, -inserted_at_seconds}
-    end)
   end
 end

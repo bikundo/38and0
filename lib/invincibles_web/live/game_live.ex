@@ -119,6 +119,7 @@ defmodule InvinciblesWeb.GameLive do
     |> assign(:simulating_week, nil)
     |> assign(:active_tab, :draft)
     |> assign(:shares, [])
+    |> assign(:active_share, nil)
   end
 
   @doc """
@@ -350,24 +351,35 @@ defmodule InvinciblesWeb.GameLive do
 
   @impl true
   def handle_event("share_lineup", _params, socket) do
-    lineup = socket.assigns.lineup
-    formation = socket.assigns.formation
-    record = socket.assigns.season_record
-
-    season_label =
-      if socket.assigns.sim_results,
-        do: Map.get(socket.assigns.sim_results, :season_label, ""),
-        else: ""
-
-    funny_quote = get_funny_quote(record)
-
-    case Game.create_share(lineup, formation, record, season_label, funny_quote) do
-      {:ok, share} ->
+    case socket.assigns[:active_share] do
+      %Game.Share{} = share ->
         url = url(~p"/share/#{share.id}")
         {:noreply, push_event(socket, "share_url", %{url: url})}
 
-      {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "Failed to generate share link.")}
+      _ ->
+        lineup = socket.assigns.lineup
+        formation = socket.assigns.formation
+        record = socket.assigns.season_record
+
+        season_label =
+          if socket.assigns.sim_results,
+            do: Map.get(socket.assigns.sim_results, :season_label, ""),
+            else: ""
+
+        funny_quote = get_funny_quote(record)
+
+        case Game.create_share(lineup, formation, record, season_label, funny_quote) do
+          {:ok, share} ->
+            url = url(~p"/share/#{share.id}")
+
+            {:noreply,
+             socket
+             |> assign(:active_share, share)
+             |> push_event("share_url", %{url: url})}
+
+          {:error, _changeset} ->
+            {:noreply, put_flash(socket, :error, "Failed to generate share link.")}
+        end
     end
   end
 
@@ -428,6 +440,22 @@ defmodule InvinciblesWeb.GameLive do
           results.wins == 38 -> :hall_of_fame
           results.losses == 0 -> :hall_of_fame
           true -> :game_over
+        end
+
+      # Automatically save the game as a Share record on completion
+      lineup = socket.assigns.lineup
+      formation = socket.assigns.formation
+      record = socket.assigns.season_record
+      season_label = Map.get(results, :season_label, "")
+      funny_quote = get_funny_quote(record)
+
+      socket =
+        case Game.create_share(lineup, formation, record, season_label, funny_quote) do
+          {:ok, share} ->
+            assign(socket, :active_share, share)
+
+          {:error, _changeset} ->
+            socket
         end
 
       socket =
@@ -561,9 +589,9 @@ defmodule InvinciblesWeb.GameLive do
                       <tr class="border-b border-[rgba(0,0,0,0.08)] text-[10px] font-bold uppercase tracking-wider text-[rgba(0,0,0,0.4)] font-semibold">
                         <th class="pb-3 pl-2 w-12 text-center">Rank</th>
                         <th class="pb-3 pl-4">Campaign</th>
-                        <th class="pb-3 text-center w-20">Formation</th>
-                        <th class="pb-3 text-center w-32">Record (W-D-L)</th>
-                        <th class="pb-3 text-center w-20">GD</th>
+                        <th class="pb-3 text-center w-20 hidden sm:table-cell">Formation</th>
+                        <th class="pb-3 text-center w-32 hidden md:table-cell">Record (W-D-L)</th>
+                        <th class="pb-3 text-center w-20 hidden sm:table-cell">GD</th>
                         <th class="pb-3 text-center w-20">Points</th>
                         <th class="pb-3 pr-2 text-right w-28">Action</th>
                       </tr>
@@ -639,7 +667,7 @@ defmodule InvinciblesWeb.GameLive do
                             </div>
                           </td>
                           <td
-                            class="py-4 text-center font-mono text-xs"
+                            class="py-4 text-center font-mono text-xs hidden sm:table-cell"
                             phx-click={JS.navigate(~p"/share/#{share.id}")}
                           >
                             <span class="bg-[#edebe9] text-[rgba(0,0,0,0.68)] px-2 py-0.5 rounded font-semibold">
@@ -647,14 +675,14 @@ defmodule InvinciblesWeb.GameLive do
                             </span>
                           </td>
                           <td
-                            class="py-4 text-center font-semibold text-[rgba(0,0,0,0.87)]"
+                            class="py-4 text-center font-semibold text-[rgba(0,0,0,0.87)] hidden md:table-cell"
                             phx-click={JS.navigate(~p"/share/#{share.id}")}
                           >
                             {wins}W - {draws}D - {losses}L
                           </td>
                           <td
                             class={[
-                              "py-4 text-center font-bold",
+                              "py-4 text-center font-bold hidden sm:table-cell",
                               if(gd >= 0, do: "text-[#00754A]", else: "text-[#c82014]")
                             ]}
                             phx-click={JS.navigate(~p"/share/#{share.id}")}
@@ -670,7 +698,7 @@ defmodule InvinciblesWeb.GameLive do
                           <td class="py-4 pr-2 text-right">
                             <.link
                               navigate={~p"/share/#{share.id}"}
-                              class="inline-flex items-center justify-center border border-[rgba(0,0,0,0.12)] hover:border-[#00754A] hover:bg-[#00754A] hover:text-white transition-all text-xs font-bold py-1.5 px-3 rounded-lg text-[rgba(0,0,0,0.68)] shadow-sm"
+                              class="inline-flex items-center justify-center border border-[rgba(0,0,0,0.12)] hover:border-[#00754A] hover:bg-[#00754A] hover:text-white transition-all text-xs font-bold py-1.5 px-3 rounded-lg text-[rgba(0,0,0,0.68)] shadow-sm whitespace-nowrap"
                             >
                               VIEW SQUAD
                             </.link>

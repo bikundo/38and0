@@ -83,6 +83,109 @@ defmodule InvinciblesWeb.LeaderboardTest do
     assert idx_a < idx_c
   end
 
+  test "Leaderboard displays at most 20 entries", %{conn: conn, appearance: app} do
+    lineup = %{gk: app}
+
+    # Insert 25 shares
+    for i <- 1..25 do
+      label = :io_lib.format("Season ~2..0B", [i]) |> List.to_string()
+      record = %{wins: i, draws: 0, losses: 38 - i, gf: i, ga: 0, week: 38}
+      {:ok, _share} = Game.create_share(lineup, "4-3-3", record, label, "Quote #{i}")
+    end
+
+    {:ok, _view, html} = live(conn, ~p"/?tab=leaderboard")
+
+    # The highest wins should be shown (Season 06..25)
+    # Season 01..05 should not be in the HTML if only 20 are shown
+    for i <- 6..25 do
+      label = :io_lib.format("Season ~2..0B", [i]) |> List.to_string()
+      assert html =~ label
+    end
+
+    for i <- 1..5 do
+      label = :io_lib.format("Season ~2..0B", [i]) |> List.to_string()
+      refute html =~ label
+    end
+  end
+
+  test "simulation completion automatically saves the campaign", %{conn: conn, appearance: app} do
+    # Get the club inserted in setup
+    club = Repo.get!(Invincibles.Game.Club, app.club_id)
+
+    # Insert the rest of the positions needed for auto-draft
+    insert_mock_squad(club)
+
+    # 1. Mount the LiveView
+    {:ok, view, _html} = live(conn, ~p"/")
+
+    # 2. Auto draft the squad
+    view |> element("button", "AUTO DRAFT SQUAD") |> render_click()
+
+    # 3. Start simulation
+    view |> render_click("simulate_season")
+
+    # 4. Fast-forward the simulation ticks synchronously (38 weeks + 1 final complete tick)
+    for _i <- 1..39 do
+      send(view.pid, :tick_simulation)
+    end
+
+    # Synchronize with the LiveView process by rendering it
+    _html = render(view)
+
+    # 5. Verify that a share has been automatically created in the database
+    shares = Game.list_active_shares()
+    assert length(shares) == 1
+    share = hd(shares)
+    assert share.season_label != ""
+    assert share.funny_quote != ""
+  end
+
+  defp insert_mock_squad(club) do
+    positions = [
+      {"LB", "DF", "lb"},
+      {"CB1", "DF", "cb1"},
+      {"CB2", "DF", "cb2"},
+      {"RB", "DF", "rb"},
+      {"LM", "MF", "lm"},
+      {"CM", "MF", "cm"},
+      {"RM", "MF", "rm"},
+      {"LW", "FW", "lw"},
+      {"ST", "FW", "st"},
+      {"RW", "FW", "rw"}
+    ]
+
+    for {name, pos, _slot} <- positions do
+      player =
+        Repo.insert!(%Invincibles.Game.Player{
+          name: name,
+          display_name: name,
+          primary_position: pos
+        })
+
+      Repo.insert!(%Invincibles.Game.Appearance{
+        player: player,
+        club: club,
+        season: "2023-24",
+        era: "Modern",
+        ovr: 85,
+        stats: %{
+          "pac" => 85,
+          "sho" => 85,
+          "pas" => 85,
+          "dri" => 85,
+          "def" => 85,
+          "phy" => 85,
+          "div" => 85,
+          "han" => 85,
+          "kic" => 85,
+          "ref" => 85,
+          "spd" => 85,
+          "pos" => 85
+        }
+      })
+    end
+  end
+
   # Helper helper to find index of a substring
   defp string_indev(string, substring) do
     case :binary.match(string, substring) do

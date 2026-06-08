@@ -40,76 +40,123 @@ defmodule InvinciblesWeb.Layouts do
   def app(assigns) do
     ~H"""
     <header class="bg-white border-b border-[rgba(0,0,0,0.08)] sticky top-0 z-50 shadow-[0_1px_3px_rgba(0,0,0,0.1),_0_2px_2px_rgba(0,0,0,0.06),_0_0_2px_rgba(0,0,0,0.07)]">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-[72px] md:h-[83px] lg:h-[99px] flex items-center justify-between transition-all duration-200">
-        <div class="flex items-center gap-6 md:gap-10">
-          <a href="/" class="flex items-center gap-3">
-            <span class="text-lg md:text-xl font-bold tracking-tighter text-[#006241]">
-              INVINCIBLES
-            </span>
-            <span class="text-[#33433d] text-[10px] md:text-xs font-semibold uppercase tracking-[0.6px]">
-              38-0-0
-            </span>
-          </a>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 transition-all duration-200">
+        <!-- Main row with title and badge -->
+        <div class="h-16 sm:h-[72px] md:h-[83px] lg:h-[99px] flex items-center justify-between">
+          <div class="flex items-center gap-6 md:gap-10">
+            <a href="/" class="flex items-center gap-3">
+              <span class="text-lg md:text-xl font-bold tracking-tighter text-[#006241]">
+                INVINCIBLES
+              </span>
+              <span class="text-[#33433d] text-[10px] md:text-xs font-semibold uppercase tracking-[0.6px]">
+                38-0-0
+              </span>
+            </a>
+            
+    <!-- Desktop Navigation -->
+            <nav class="hidden md:flex items-center gap-6">
+              <.link
+                navigate={~p"/"}
+                class={[
+                  "text-xs font-bold uppercase tracking-[0.1em] py-4",
+                  if(
+                    @active_tab != :leaderboard and
+                      @step not in [:simulating, :game_over, :hall_of_fame],
+                    do: "text-[#006241] border-b-4 border-[#006241] mt-1",
+                    else: "text-[rgba(0,0,0,0.87)] hover:text-[#00754A] transition-colors"
+                  )
+                ]}
+              >
+                Draft
+              </.link>
+              <.link
+                navigate={~p"/"}
+                class={[
+                  "text-xs font-bold uppercase tracking-[0.1em] py-4",
+                  if(
+                    @active_tab != :leaderboard and @step in [:simulating, :game_over, :hall_of_fame],
+                    do: "text-[#006241] border-b-4 border-[#006241] mt-1",
+                    else: "text-[rgba(0,0,0,0.87)] hover:text-[#00754A] transition-colors"
+                  )
+                ]}
+              >
+                Simulation
+              </.link>
+              <.link
+                navigate={~p"/?tab=leaderboard"}
+                class={[
+                  "text-xs font-bold uppercase tracking-[0.1em] py-4",
+                  if(@active_tab == :leaderboard,
+                    do: "text-[#006241] border-b-4 border-[#006241] mt-1",
+                    else: "text-[rgba(0,0,0,0.87)] hover:text-[#00754A] transition-colors"
+                  )
+                ]}
+              >
+                Leaderboard
+              </.link>
+            </nav>
+          </div>
 
-          <nav class="hidden md:flex items-center gap-6">
-            <.link
-              navigate={~p"/"}
-              class={[
-                "text-xs font-bold uppercase tracking-[0.1em] py-4",
-                if(
-                  @active_tab != :leaderboard and
-                    @step not in [:simulating, :game_over, :hall_of_fame],
-                  do: "text-[#006241] border-b-4 border-[#006241] mt-1",
-                  else: "text-[rgba(0,0,0,0.87)] hover:text-[#00754A] transition-colors"
-                )
-              ]}
-            >
-              Draft
-            </.link>
-            <.link
-              navigate={~p"/"}
-              class={[
-                "text-xs font-bold uppercase tracking-[0.1em] py-4",
-                if(@active_tab != :leaderboard and @step in [:simulating, :game_over, :hall_of_fame],
-                  do: "text-[#006241] border-b-4 border-[#006241] mt-1",
-                  else: "text-[rgba(0,0,0,0.87)] hover:text-[#00754A] transition-colors"
-                )
-              ]}
-            >
-              Simulation
-            </.link>
-            <.link
-              navigate={~p"/?tab=leaderboard"}
-              class={[
-                "text-xs font-bold uppercase tracking-[0.1em] py-4",
-                if(@active_tab == :leaderboard,
-                  do: "text-[#006241] border-b-4 border-[#006241] mt-1",
-                  else: "text-[rgba(0,0,0,0.87)] hover:text-[#00754A] transition-colors"
-                )
-              ]}
-            >
-              Leaderboard
-            </.link>
-          </nav>
-        </div>
-
-        <div class="flex items-center gap-3">
-          <%= if @record do %>
-            <div class="flex flex-col text-right">
-              <span class="text-[9px] font-bold text-[rgba(0,0,0,0.58)] uppercase tracking-[0.6px] leading-none">
-                Record
-              </span>
-              <span class="text-sm font-bold tracking-wide text-[rgba(0,0,0,0.87)] mt-1">
-                {@record.wins}W - {@record.draws}D - {@record.losses}L
-              </span>
-            </div>
-            <%= if @record.week > 0 do %>
-              <span class="bg-[#00754A] text-white text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ml-1">
-                GW {@record.week}
-              </span>
+          <div class="flex items-center gap-3">
+            <%= if @record do %>
+              <div class="flex flex-col text-right">
+                <span class="text-[9px] font-bold text-[rgba(0,0,0,0.58)] uppercase tracking-[0.6px] leading-none">
+                  Record
+                </span>
+                <span class="text-sm font-bold tracking-wide text-[rgba(0,0,0,0.87)] mt-1">
+                  {@record.wins}W - {@record.draws}D - {@record.losses}L
+                </span>
+              </div>
+              <%= if @record.week > 0 do %>
+                <span class="bg-[#00754A] text-white text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ml-1">
+                  GW {@record.week}
+                </span>
+              <% end %>
             <% end %>
-          <% end %>
+          </div>
         </div>
+        
+    <!-- Mobile Navigation Row (only visible on mobile) -->
+        <nav class="flex md:hidden items-center justify-around pb-3 border-t border-[rgba(0,0,0,0.04)] pt-2 gap-4">
+          <.link
+            navigate={~p"/"}
+            class={[
+              "text-xs font-bold uppercase tracking-[0.1em] py-2",
+              if(
+                @active_tab != :leaderboard and
+                  @step not in [:simulating, :game_over, :hall_of_fame],
+                do: "text-[#006241] border-b-2 border-[#006241] mt-0.5",
+                else: "text-[rgba(0,0,0,0.87)] hover:text-[#00754A] transition-colors"
+              )
+            ]}
+          >
+            Draft
+          </.link>
+          <.link
+            navigate={~p"/"}
+            class={[
+              "text-xs font-bold uppercase tracking-[0.1em] py-2",
+              if(@active_tab != :leaderboard and @step in [:simulating, :game_over, :hall_of_fame],
+                do: "text-[#006241] border-b-2 border-[#006241] mt-0.5",
+                else: "text-[rgba(0,0,0,0.87)] hover:text-[#00754A] transition-colors"
+              )
+            ]}
+          >
+            Simulation
+          </.link>
+          <.link
+            navigate={~p"/?tab=leaderboard"}
+            class={[
+              "text-xs font-bold uppercase tracking-[0.1em] py-2",
+              if(@active_tab == :leaderboard,
+                do: "text-[#006241] border-b-2 border-[#006241] mt-0.5",
+                else: "text-[rgba(0,0,0,0.87)] hover:text-[#00754A] transition-colors"
+              )
+            ]}
+          >
+            Leaderboard
+          </.link>
+        </nav>
       </div>
     </header>
 
