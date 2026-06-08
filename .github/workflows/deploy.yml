@@ -93,6 +93,7 @@ jobs:
             echo "SECRET_KEY_BASE=${{ secrets.SECRET_KEY_BASE }}" >> /var/www/invincibles/.env
             
             # Run Migrations
+            export $(cat /var/www/invincibles/.env | xargs)
             /var/www/invincibles/bin/invincibles eval "Invincibles.Release.migrate"
             
             # Copy configuration files to their system paths
