@@ -1179,13 +1179,8 @@ defmodule InvinciblesWeb.GameLive do
                                 )
                               ]}
                             >
-                              <%!-- Top row: badge + name + club --%>
+                              <%!-- Top row: name + club --%>
                               <div class="flex items-center gap-3">
-                                <%!-- OVR Badge --%>
-                                <div class="flex-shrink-0 w-8 h-8 rounded-md bg-[#edebe9] border border-[rgba(0,0,0,0.08)] flex items-center justify-center font-bold text-xs text-[rgba(0,0,0,0.87)]">
-                                  {app.ovr}
-                                </div>
-
                                 <%!-- Player Info --%>
                                 <div class="min-w-0 flex-1">
                                   <div class="font-semibold text-[13px] text-[rgba(0,0,0,0.87)] leading-tight">

@@ -586,11 +586,23 @@ defmodule Invincibles.Game do
   Lists appearances for a club in a specific season with OVR >= 80, sorted by OVR (asc/desc as required by the draft).
   """
   def list_appearances_for_spin(club_id, season) do
-    from(a in Appearance,
-      where: a.club_id == ^club_id and a.season == ^season and a.ovr >= 80,
-      order_by: a.ovr,
-      preload: [:player, :club]
-    )
-    |> Repo.all()
+    appearances =
+      from(a in Appearance,
+        where: a.club_id == ^club_id and a.season == ^season and a.ovr >= 80,
+        preload: [:player, :club]
+      )
+      |> Repo.all()
+
+    pos_weight = fn
+      "GK" -> 1
+      "DF" -> 2
+      "MF" -> 3
+      "FW" -> 4
+      _ -> 5
+    end
+
+    Enum.sort_by(appearances, fn app ->
+      {pos_weight.(app.player.primary_position), app.player.name}
+    end)
   end
 end
