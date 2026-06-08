@@ -4,7 +4,48 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
-    <.live_title default="Invincibles" suffix=" · Phoenix Framework">
+    <meta
+      name="description"
+      content={
+        assigns[:meta_description] ||
+          "Draft legendary Premier League players, simulate a 38-game season, and build your own undefeated Invincibles squad."
+      }
+    />
+    <meta
+      property="og:title"
+      content={
+        assigns[:og_title] || assigns[:page_title] ||
+          "Invincibles - Premier League Retro Draft Game"
+      }
+    />
+    <meta
+      property="og:description"
+      content={
+        assigns[:og_description] || assigns[:meta_description] ||
+          "Draft legendary Premier League players, simulate a 38-game season, and build your own undefeated Invincibles squad."
+      }
+    />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:url"
+      content={"https://invincibles.website" <> (assigns[:current_path] || "")}
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content={
+        assigns[:og_title] || assigns[:page_title] ||
+          "Invincibles - Premier League Retro Draft Game"
+      }
+    />
+    <meta
+      name="twitter:description"
+      content={
+        assigns[:og_description] || assigns[:meta_description] ||
+          "Draft legendary Premier League players, simulate a 38-game season, and build your own undefeated Invincibles squad."
+      }
+    />
+    <.live_title default="Invincibles" suffix=" · Premier League Retro Draft">
       {assigns[:page_title]}
     </.live_title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />

@@ -7,6 +7,27 @@ defmodule InvinciblesWeb.ShareLive do
   def mount(%{"id" => id}, _session, socket) do
     case Game.get_share(id) do
       {:ok, share} ->
+        wins = Map.get(share.season_record, "wins") || Map.get(share.season_record, :wins) || 0
+        draws = Map.get(share.season_record, "draws") || Map.get(share.season_record, :draws) || 0
+
+        losses =
+          Map.get(share.season_record, "losses") || Map.get(share.season_record, :losses) || 0
+
+        pts = wins * 3 + draws
+        record_str = "#{wins}W - #{draws}D - #{losses}L"
+
+        status =
+          cond do
+            wins == 38 -> "Perfect 38-0-0 Season!"
+            losses == 0 -> "Undefeated Invincible Season!"
+            true -> "Finished with #{pts} Points!"
+          end
+
+        og_title = "My Retro Lineup: #{status}"
+
+        og_desc =
+          "Check out my #{share.formation} draft squad for the #{share.season_label || "retro"} season. Record: #{record_str}. Quote: \"#{share.funny_quote}\""
+
         socket =
           socket
           |> assign(:share, share)
@@ -16,6 +37,11 @@ defmodule InvinciblesWeb.ShareLive do
           |> assign(:season_label, share.season_label)
           |> assign(:funny_quote, share.funny_quote)
           |> assign(:formation_layouts, GameLive.formation_layouts())
+          |> assign(:page_title, "Shared Lineup - #{status}")
+          |> assign(:og_title, og_title)
+          |> assign(:og_description, og_desc)
+          |> assign(:meta_description, og_desc)
+          |> assign(:current_path, "/share/#{id}")
 
         {:ok, socket}
 

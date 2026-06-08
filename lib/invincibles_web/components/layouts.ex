@@ -48,9 +48,6 @@ defmodule InvinciblesWeb.Layouts do
               <span class="text-lg md:text-xl font-bold tracking-tighter text-[#006241]">
                 INVINCIBLES
               </span>
-              <span class="text-[#33433d] text-[10px] md:text-xs font-semibold uppercase tracking-[0.6px]">
-                38-0-0
-              </span>
             </a>
             
     <!-- Desktop Navigation -->
@@ -163,6 +160,26 @@ defmodule InvinciblesWeb.Layouts do
     <main class="w-full">
       {render_slot(@inner_block)}
     </main>
+
+    <footer class="bg-white border-t border-[rgba(0,0,0,0.08)] py-8 text-center text-[11px] text-[rgba(0,0,0,0.4)] font-bold tracking-wider uppercase">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+          &copy; {Date.utc_today().year} Invincibles · Premier League Retro Draft
+        </div>
+        <div class="flex items-center gap-6">
+          <.link navigate={~p"/"} class="hover:text-[#00754A] transition-colors">Draft</.link>
+          <.link navigate={~p"/?tab=leaderboard"} class="hover:text-[#00754A] transition-colors">
+            Leaderboard
+          </.link>
+          <.link navigate={~p"/squads"} class="hover:text-[#00754A] transition-colors">
+            Clubs Directory
+          </.link>
+          <.link navigate={~p"/sitemap.xml"} class="hover:text-[#00754A] transition-colors">
+            Sitemap
+          </.link>
+        </div>
+      </div>
+    </footer>
 
     <.flash_group flash={@flash} />
     """

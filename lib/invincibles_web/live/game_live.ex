@@ -83,7 +83,56 @@ defmodule InvinciblesWeb.GameLive do
         socket
       end
 
-    {:noreply, assign(socket, active_tab: tab)}
+    current_path =
+      case tab do
+        :leaderboard -> "/?tab=leaderboard"
+        :simulation -> "/?tab=simulation"
+        _ -> "/"
+      end
+
+    page_title =
+      case tab do
+        :leaderboard -> "Leaderboard - retro drafting campaigns"
+        _ -> "Play Retro Premier League Draft Simulator"
+      end
+
+    meta_description =
+      "Draft legendary players from the 90s, 00s, 10s, or 20s. Build custom formations, simulate matches, and lead your squad to an undefeated 38-0-0 season."
+
+    socket =
+      socket
+      |> assign(:active_tab, tab)
+      |> assign(:page_title, page_title)
+      |> assign(:meta_description, meta_description)
+      |> assign(:current_path, current_path)
+
+    socket =
+      case {params["club_id"], params["season"]} do
+        {club_id_str, season} when is_binary(club_id_str) and is_binary(season) ->
+          case Integer.parse(club_id_str) do
+            {club_id, ""} ->
+              case Invincibles.Repo.get(Game.Club, club_id) do
+                nil ->
+                  socket
+
+                club ->
+                  appearances = Game.list_appearances_for_spin(club.id, season)
+
+                  socket
+                  |> assign(:step, :drafting)
+                  |> assign(:current_spin, {club, season})
+                  |> assign(:draft_pool, appearances)
+              end
+
+            _ ->
+              socket
+          end
+
+        _ ->
+          socket
+      end
+
+    {:noreply, socket}
   end
 
   defp reset_state(socket) do

@@ -19,6 +19,11 @@ defmodule InvinciblesWeb.Router do
 
     live "/", GameLive
     live "/share/:id", ShareLive
+    get "/sitemap.xml", SitemapController, :index
+
+    live "/squads", DirectoryLive
+    live "/squads/:club_slug", DirectoryLive
+    live "/squads/:club_slug/:season_slug", DirectoryLive
   end
 
   # Other scopes may use custom stacks.

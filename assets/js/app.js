@@ -25,6 +25,19 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/invincibles"
 import topbar from "../vendor/topbar"
 
+// Google Analytics tag (gtag.js) integration
+if (typeof window !== "undefined") {
+  const gaScript = document.createElement("script");
+  gaScript.async = true;
+  gaScript.src = "https://www.googletagmanager.com/gtag/js?id=G-WKFC3K76ZZ";
+  document.head.appendChild(gaScript);
+
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function() { window.dataLayer.push(arguments); };
+  window.gtag("js", new Date());
+  window.gtag("config", "G-WKFC3K76ZZ");
+}
+
 // A robust helper to convert oklch(...) to rgb(...)
 function oklchToRgb(oklchStr) {
   const match = oklchStr.match(/oklch\(([\d%.]+)\s+([\d%.]+)\s+([\d%.]+)(?:\s*\/\s*([\d%.]+))?\)/) ||

@@ -548,4 +548,49 @@ defmodule Invincibles.Game do
     )
     |> Repo.all()
   end
+
+  @doc """
+  Lists all clubs in alphabetical order.
+  """
+  def list_all_clubs do
+    from(c in Invincibles.Game.Club, order_by: c.name)
+    |> Repo.all()
+  end
+
+  @doc """
+  Lists all unique seasons for which a club has appearances.
+  """
+  def list_seasons_for_club(club_id) do
+    from(a in Appearance,
+      where: a.club_id == ^club_id,
+      group_by: a.season,
+      select: a.season,
+      order_by: [desc: a.season]
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Lists all appearances for a club in a specific season, sorted by rating (desc).
+  """
+  def list_appearances_for_club_and_season(club_id, season) do
+    from(a in Appearance,
+      where: a.club_id == ^club_id and a.season == ^season,
+      order_by: [desc: a.ovr],
+      preload: [:player, :club]
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Lists appearances for a club in a specific season with OVR >= 80, sorted by OVR (asc/desc as required by the draft).
+  """
+  def list_appearances_for_spin(club_id, season) do
+    from(a in Appearance,
+      where: a.club_id == ^club_id and a.season == ^season and a.ovr >= 80,
+      order_by: a.ovr,
+      preload: [:player, :club]
+    )
+    |> Repo.all()
+  end
 end
