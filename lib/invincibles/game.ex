@@ -513,4 +513,38 @@ defmodule Invincibles.Game do
         end
     end
   end
+
+  @doc """
+  Lists all active shares created within the last 48 hours, sorted by:
+  1. Points (wins * 3 + draws) desc
+  2. Losses asc
+  3. Goal Difference desc
+  4. Wins desc
+  5. Recency desc
+  """
+  def list_active_shares do
+    two_days_ago_naive = NaiveDateTime.utc_now() |> NaiveDateTime.add(-172_800, :second)
+
+    from(s in Share,
+      where: s.inserted_at > ^two_days_ago_naive
+    )
+    |> Repo.all()
+    |> Enum.sort_by(fn share ->
+      wins = Map.get(share.season_record, "wins") || Map.get(share.season_record, :wins) || 0
+      draws = Map.get(share.season_record, "draws") || Map.get(share.season_record, :draws) || 0
+
+      losses =
+        Map.get(share.season_record, "losses") || Map.get(share.season_record, :losses) || 0
+
+      gf = Map.get(share.season_record, "gf") || Map.get(share.season_record, :gf) || 0
+      ga = Map.get(share.season_record, "ga") || Map.get(share.season_record, :ga) || 0
+      points = wins * 3 + draws
+      gd = gf - ga
+
+      inserted_at_seconds =
+        DateTime.from_naive!(share.inserted_at, "Etc/UTC") |> DateTime.to_unix()
+
+      {-points, losses, -gd, -wins, -inserted_at_seconds}
+    end)
+  end
 end

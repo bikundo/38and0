@@ -32,6 +32,8 @@ defmodule InvinciblesWeb.Layouts do
     doc: "the current [scope](https://hexdocs.pm/phoenix/scopes.html)"
 
   attr :record, :map, default: nil, doc: "the current season record"
+  attr :active_tab, :atom, default: :draft
+  attr :step, :atom, default: nil
 
   slot :inner_block, required: true
 
@@ -50,24 +52,44 @@ defmodule InvinciblesWeb.Layouts do
           </a>
 
           <nav class="hidden md:flex items-center gap-6">
-            <a
-              href="#"
-              class="text-xs font-bold uppercase tracking-[0.1em] text-[#006241] border-b-4 border-[#006241] py-4 mt-1"
+            <.link
+              navigate={~p"/"}
+              class={[
+                "text-xs font-bold uppercase tracking-[0.1em] py-4",
+                if(
+                  @active_tab != :leaderboard and
+                    @step not in [:simulating, :game_over, :hall_of_fame],
+                  do: "text-[#006241] border-b-4 border-[#006241] mt-1",
+                  else: "text-[rgba(0,0,0,0.87)] hover:text-[#00754A] transition-colors"
+                )
+              ]}
             >
               Draft
-            </a>
-            <a
-              href="#"
-              class="text-xs font-bold uppercase tracking-[0.1em] text-[rgba(0,0,0,0.87)] hover:text-[#00754A] transition-colors py-4"
+            </.link>
+            <.link
+              navigate={~p"/"}
+              class={[
+                "text-xs font-bold uppercase tracking-[0.1em] py-4",
+                if(@active_tab != :leaderboard and @step in [:simulating, :game_over, :hall_of_fame],
+                  do: "text-[#006241] border-b-4 border-[#006241] mt-1",
+                  else: "text-[rgba(0,0,0,0.87)] hover:text-[#00754A] transition-colors"
+                )
+              ]}
             >
               Simulation
-            </a>
-            <a
-              href="#"
-              class="text-xs font-bold uppercase tracking-[0.1em] text-[rgba(0,0,0,0.87)] hover:text-[#00754A] transition-colors py-4"
+            </.link>
+            <.link
+              navigate={~p"/?tab=leaderboard"}
+              class={[
+                "text-xs font-bold uppercase tracking-[0.1em] py-4",
+                if(@active_tab == :leaderboard,
+                  do: "text-[#006241] border-b-4 border-[#006241] mt-1",
+                  else: "text-[rgba(0,0,0,0.87)] hover:text-[#00754A] transition-colors"
+                )
+              ]}
             >
               Leaderboard
-            </a>
+            </.link>
           </nav>
         </div>
 

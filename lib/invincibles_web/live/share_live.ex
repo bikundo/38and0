@@ -32,7 +32,7 @@ defmodule InvinciblesWeb.ShareLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} record={@season_record}>
+    <Layouts.app flash={@flash} record={@season_record} active_tab={:share} step={nil}>
       <div class="min-h-screen bg-[#f2f0eb] text-[rgba(0,0,0,0.87)] font-sans flex flex-col pb-12">
         <!-- Main container -->
         <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start w-full">

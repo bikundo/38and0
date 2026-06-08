@@ -141,11 +141,11 @@ const Hooks = {
       const VISIBLE = 5;
       const REEL_H = ITEM_H * VISIBLE;
       const CENTER_OFFSET = Math.floor(VISIBLE / 2); // = 2
-      const FAST_MS = 1000;   // phase 1: constant fast scroll
-      const DECEL_MS = 1600;  // phase 2: easeOutQuint deceleration
+      const FAST_MS = 400;   // phase 1: constant fast scroll
+      const DECEL_MS = 1000;  // phase 2: easeOutQuint deceleration
       const TOTAL_MS = FAST_MS + DECEL_MS;
       const FAST_SPEED = 1.8; // px/ms
-      const fastDistance = FAST_MS * FAST_SPEED; // = 1800px
+      const fastDistance = FAST_MS * FAST_SPEED; // = 720px
 
       const easeOutQuint = t => 1 - Math.pow(1 - t, 5);
 
@@ -289,7 +289,7 @@ const Hooks = {
 
         // Push to LiveView early so the result arrives during Phase 1,
         // giving us time to update the landing element before it scrolls in
-        setTimeout(() => this.pushEvent("spin_wheel", {}), 800);
+        setTimeout(() => this.pushEvent("spin_wheel", {}), 50);
 
         setTimeout(() => { this.el.dataset.spinning = "false"; }, TOTAL_MS + 100);
       };
@@ -309,7 +309,7 @@ const Hooks = {
         if (clubReel.landingEl) clubReel.landingEl.textContent = club;
         if (seasonReel.landingEl) seasonReel.landingEl.textContent = season;
 
-        // Calculate remaining animation time and add 1s linger after it stops
+        // Calculate remaining animation time and add 200ms linger after it stops
         const elapsed = performance.now() - spinStart;
         const msLeft = Math.max(0, TOTAL_MS - elapsed);
 
@@ -322,7 +322,7 @@ const Hooks = {
             spinState = null;
             this.pushEvent("animation_done", {});
           }, 320);
-        }, msLeft + 1000); // wait for reel to stop + 1s
+        }, msLeft + 200); // wait for reel to stop + 200ms
       });
     }
   },
