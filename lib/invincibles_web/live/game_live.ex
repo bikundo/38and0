@@ -328,23 +328,20 @@ defmodule InvinciblesWeb.GameLive do
       points >= 90 ->
         "#{points} points! You matched the elite standard of Chelsea 2005/06 or Man City 2018/19 champions."
 
-      ga <= 15 and record.week >= 38 ->
+      ga <= 15 ->
         "Only #{ga} goals conceded! Jose Mourinho is nodding in approval. You matched Chelsea's 2004/05 defensive masterclass."
 
-      points <= 20 and record.week >= 38 ->
-        "#{points} points. You're dangerously close to matching Derby County's 2007/08 record of 11 points!"
+      points >= 75 ->
+        "A fantastic #{points}-point campaign! You secured Champions League football, but the Invincibles dream awaits."
+
+      points >= 50 ->
+        "A respectable #{points}-point season. Your squad played some beautiful football, but did it have the grit of Sean Dyche's Burnley?"
+
+      points >= 38 ->
+        "You reached the safety threshold, but Sam Allardyce is confident he could have kept this team up with 10 matches to spare."
 
       true ->
-        cond do
-          rem(points, 3) == 0 ->
-            "You matched City 2021's record of winter dominance, but can you do it on a cold rainy night in Stoke?"
-
-          rem(points, 3) == 1 ->
-            "Solid campaign, but Sam Allardyce is confident he could have kept this team up with 10 matches to spare."
-
-          true ->
-            "Your squad played some beautiful football, but did it have the grit of Sean Dyche's Burnley?"
-        end
+        "Dangerously close to matching Derby County's 2007/08 record of 11 points! Time to overhaul the squad."
     end
   end
 
@@ -588,7 +585,7 @@ defmodule InvinciblesWeb.GameLive do
 
                     <%!-- First loss callout --%>
                     <%= if first_loss do %>
-                      <div class="flex items-center gap-2 bg-[#fff5f5] border border-[#fde8e8] rounded-lg px-3 py-2 mb-4">
+                      <div class="flex items-center gap-2 bg-[rgba(200,32,20,0.03)] border border-[rgba(200,32,20,0.15)] rounded-lg px-3 py-2 mb-4">
                         <.icon name="hero-x-circle" class="w-4 h-4 text-[#c82014] shrink-0" />
                         <div class="text-[11px] text-[#c82014] font-semibold leading-snug">
                           First loss at Week {first_loss.week} — INVINCIBLES {first_loss.gf}–{first_loss.ga} {Map.get(
@@ -602,13 +599,13 @@ defmodule InvinciblesWeb.GameLive do
 
                     <%!-- Funny quote --%>
                     <div class={[
-                      "rounded-lg px-4 py-3 text-[11px] leading-relaxed font-medium italic border-l-4",
+                      "text-center text-[11px] leading-relaxed font-medium italic mt-2",
                       if(is_perfect,
-                        do: "bg-[#faf6ee] border-[#cba258] text-[#7a5c1e]",
+                        do: "text-[#7a5c1e]",
                         else:
                           if(is_invincible,
-                            do: "bg-[#f0faf5] border-[#00754A] text-[#00563b]",
-                            else: "bg-[#f5f5f5] border-[rgba(0,0,0,0.2)] text-[rgba(0,0,0,0.58)]"
+                            do: "text-[#00563b]",
+                            else: "text-[rgba(0,0,0,0.58)]"
                           )
                       )
                     ]}>
@@ -992,10 +989,10 @@ defmodule InvinciblesWeb.GameLive do
 
               <%= if @step == :game_over do %>
                 <div class="text-center py-6">
-                  <div class="w-12 h-12 mx-auto bg-[#c82014]/10 border border-[#c82014]/30 rounded-[12px] flex items-center justify-center text-xl mb-4">
-                    😤
+                  <div class="w-14 h-14 mx-auto bg-[#edebe9] border border-[rgba(0,0,0,0.08)] rounded-full flex items-center justify-center mb-4 shadow-sm">
+                    <.icon name="hero-x-circle" class="w-6 h-6 text-[#c82014]" />
                   </div>
-                  <h2 class="text-lg font-bold tracking-tight mb-2 text-[#006241]">
+                  <h2 class="text-xl font-bold tracking-tight mb-2 text-[#006241]">
                     Season Complete
                   </h2>
 
@@ -1019,20 +1016,20 @@ defmodule InvinciblesWeb.GameLive do
 
                   <button
                     phx-click="start_game"
-                    class="w-full bg-[#c82014] hover:bg-[#a61a0f] text-white font-bold py-[10px] px-[18px] rounded-[8px] transition-colors duration-150 active:scale-[0.98]"
+                    class="w-full btn-starbucks btn-starbucks-filled text-sm"
                   >
-                    TRY AGAIN
+                    Try Again
                   </button>
                 </div>
               <% end %>
 
               <%= if @step == :hall_of_fame do %>
                 <div class="text-center py-6">
-                  <div class="w-12 h-12 mx-auto bg-[#faf6ee] border border-[#dfc49d] rounded-[12px] flex items-center justify-center mb-4">
+                  <div class="w-14 h-14 mx-auto bg-[#faf6ee] border border-[#dfc49d] rounded-full flex items-center justify-center mb-4 shadow-sm">
                     <.icon name="hero-star" class="w-6 h-6 text-[#cba258]" />
                   </div>
                   <h2 class="text-xl font-bold tracking-tight mb-2 text-[#cba258]">
-                    {if @season_record.wins == 38, do: "GOLDEN TROPHY", else: "THE UNBEATEN"}
+                    {if @season_record.wins == 38, do: "Golden Trophy", else: "The Unbeaten"}
                   </h2>
                   <p class="text-xs text-[rgba(0,0,0,0.58)] leading-relaxed mb-6">
                     <%= if @season_record.wins == 38 do %>
@@ -1046,7 +1043,7 @@ defmodule InvinciblesWeb.GameLive do
                     phx-click="start_game"
                     class="w-full btn-starbucks btn-starbucks-filled text-sm"
                   >
-                    PLAY ANOTHER RUN
+                    Play Another Run
                   </button>
                 </div>
               <% end %>
