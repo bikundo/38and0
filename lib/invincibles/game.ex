@@ -25,6 +25,8 @@ defmodule Invincibles.Game do
     # To keep draft quality high, we only select club/seasons with at least 5 players of OVR >= 80.
     use_top_6? = :rand.uniform(100) <= 70
 
+    # Fetch all valid (club_id, season) pairs — small result set after GROUP BY/HAVING —
+    # then pick randomly in Elixir to avoid ORDER BY RANDOM() sort overhead under load.
     query =
       if use_top_6? do
         from(a in Appearance,
@@ -32,9 +34,7 @@ defmodule Invincibles.Game do
           where: a.ovr >= 80 and c.name in ^top_6_names,
           group_by: [a.club_id, a.season, c.id],
           having: count(a.id) >= 5,
-          select: {a.club_id, a.season},
-          order_by: fragment("RANDOM()"),
-          limit: 1
+          select: {a.club_id, a.season}
         )
       else
         from(a in Appearance,
@@ -42,29 +42,38 @@ defmodule Invincibles.Game do
           where: a.ovr >= 80,
           group_by: [a.club_id, a.season, c.id],
           having: count(a.id) >= 5,
-          select: {a.club_id, a.season},
-          order_by: fragment("RANDOM()"),
-          limit: 1
+          select: {a.club_id, a.season}
         )
       end
 
-    case Repo.one(query) do
-      nil ->
-        # Fallback to unrestricted search if query is empty or db not ready
-        fallback_query =
-          from(a in Appearance,
-            join: c in assoc(a, :club),
-            order_by: fragment("RANDOM()"),
-            limit: 1,
-            preload: [:club]
-          )
+    valid_pairs = Repo.all(query)
 
-        case Repo.one(fallback_query) do
-          nil -> {:error, :no_data}
-          app -> fetch_appearances_for_spin(app.club, app.season)
+    case valid_pairs do
+      [] ->
+        # Fallback: pick any appearance at all
+        count = Repo.aggregate(Appearance, :count, :id)
+
+        if count == 0 do
+          {:error, :no_data}
+        else
+          offset = :rand.uniform(count) - 1
+
+          app =
+            from(a in Appearance,
+              offset: ^offset,
+              limit: 1,
+              preload: [:club]
+            )
+            |> Repo.one()
+
+          case app do
+            nil -> {:error, :no_data}
+            app -> fetch_appearances_for_spin(app.club, app.season)
+          end
         end
 
-      {club_id, season} ->
+      pairs ->
+        {club_id, season} = Enum.random(pairs)
         club = Repo.get!(Invincibles.Game.Club, club_id)
         fetch_appearances_for_spin(club, season)
     end
@@ -111,6 +120,7 @@ defmodule Invincibles.Game do
 
   @doc """
   Automatically fills any empty positions in the lineup with high-quality (OVR >= 80) players.
+  Fetches all draftable candidates in a single query, then assigns positions in memory.
   """
   def auto_draft_lineup(
         lineup,
@@ -137,14 +147,46 @@ defmodule Invincibles.Game do
       st2: [:st]
     }
 
-    Enum.reduce(active_slots, {lineup, []}, fn slot, {current_lineup, drafted_ids} ->
-      # Accumulate all drafted player IDs from current lineup and local list
-      all_drafted =
-        (Enum.map(current_lineup, fn {_, app} -> if app, do: app.player_id, else: nil end) ++
-           drafted_ids)
-        |> Enum.reject(&is_nil/1)
+    # Collect already-drafted player IDs to exclude
+    already_drafted =
+      Enum.map(lineup, fn {_, app} -> if app, do: app.player_id, else: nil end)
+      |> Enum.reject(&is_nil/1)
 
-      if is_nil(Map.get(current_lineup, slot)) do
+    # Determine which position categories we actually need
+    empty_slots = Enum.filter(active_slots, fn slot -> is_nil(Map.get(lineup, slot)) end)
+
+    if Enum.empty?(empty_slots) do
+      lineup
+    else
+      needed_categories =
+        Enum.map(empty_slots, fn slot ->
+          cond do
+            slot == :gk -> "GK"
+            slot in [:lb, :cb1, :cb2, :cb3, :rb] -> "DF"
+            slot in [:lm, :cm, :cm1, :cm2, :cm3, :rm] -> "MF"
+            slot in [:lw, :st, :st1, :st2, :rw] -> "FW"
+          end
+        end)
+        |> Enum.uniq()
+
+      # Single batch query: fetch ALL draftable candidates across needed categories
+      all_candidates =
+        from(a in Appearance,
+          join: p in assoc(a, :player),
+          where:
+            a.ovr >= 80 and p.primary_position in ^needed_categories and
+              a.player_id not in ^already_drafted,
+          preload: [:player, :club]
+        )
+        |> Repo.all()
+        |> Enum.shuffle()
+
+      # Group candidates by position category for fast lookup
+      candidates_by_category = Enum.group_by(all_candidates, & &1.player.primary_position)
+
+      # Now fill slots purely in memory — no more DB queries
+      Enum.reduce(empty_slots, {lineup, already_drafted}, fn slot,
+                                                             {current_lineup, drafted_ids} ->
         category =
           cond do
             slot == :gk -> "GK"
@@ -155,17 +197,11 @@ defmodule Invincibles.Game do
 
         preferred_specs = Map.get(slot_preferences, slot, [])
 
-        # Fetch 30 random candidates from the DB for this category
+        # Filter candidates: not already drafted in this run
         base_candidates =
-          from(a in Appearance,
-            join: p in assoc(a, :player),
-            where:
-              a.ovr >= 80 and p.primary_position == ^category and a.player_id not in ^all_drafted,
-            order_by: fragment("RANDOM()"),
-            limit: 30,
-            preload: [:player, :club]
-          )
-          |> Repo.all()
+          Map.get(candidates_by_category, category, [])
+          |> Enum.reject(fn app -> app.player_id in drafted_ids end)
+          |> Enum.take(30)
 
         # Try to find candidates matching preferred sub-positions
         specific_candidates =
@@ -174,7 +210,7 @@ defmodule Invincibles.Game do
             get_specific_position(app.player.display_name) in preferred_specs
           end)
 
-        # Step 3: Choose from specific matching, or fall back to any candidate of general category
+        # Choose from specific matching, or fall back to any candidate of general category
         final_candidates =
           if Enum.empty?(specific_candidates) do
             base_candidates
@@ -190,11 +226,9 @@ defmodule Invincibles.Game do
             chosen = Enum.random(list)
             {Map.put(current_lineup, slot, chosen), [chosen.player_id | drafted_ids]}
         end
-      else
-        {current_lineup, drafted_ids}
-      end
-    end)
-    |> elem(0)
+      end)
+      |> elem(0)
+    end
   end
 
   # Helper to identify player's natural sub-position based on name keywords

@@ -181,21 +181,15 @@ defmodule Invincibles.Game.SimEngine do
 
   @doc """
   Simulates a full 38-game season.
-  Plays games against actual historical opponents from a randomly selected season if database is checked out (otherwise falls back to static baseline).
+  Plays games against actual historical opponents from a randomly selected season.
+  Falls back to static baseline if no season data is available or DB is not accessible.
   """
   def simulate_season(user_strengths) do
-    has_db? =
-      try do
-        Repo.query!("SELECT 1")
-        true
-      rescue
-        _ -> false
-      end
-
-    if has_db? do
+    try do
       simulate_opponents_season(user_strengths)
-    else
-      simulate_static_season(user_strengths)
+    rescue
+      # Falls back to static simulation when DB sandbox is not checked out (async tests)
+      _e in DBConnection.OwnershipError -> simulate_static_season(user_strengths)
     end
   end
 
@@ -238,11 +232,8 @@ defmodule Invincibles.Game.SimEngine do
     if Enum.empty?(clubs) do
       simulate_static_season(user_strengths)
     else
-      # Compute dynamic strengths for all clubs once
-      opponent_strengths_map =
-        Enum.into(clubs, %{}, fn club ->
-          {club.id, calculate_opponent_strengths(club.id, season)}
-        end)
+      # Batch: fetch ALL appearances for the season in ONE query, then partition in Elixir
+      opponent_strengths_map = batch_calculate_opponent_strengths(clubs, season)
 
       # Build 38 fixtures
       fixtures = build_fixtures(clubs)
@@ -402,7 +393,9 @@ defmodule Invincibles.Game.SimEngine do
     end
   end
 
-  # Select a random season from appearances in the DB
+  # Select a random season from appearances in the DB.
+  # The distinct season set is inherently small (~30 rows), so fetching all and
+  # picking in Elixir is cheaper than ORDER BY RANDOM() on the full table.
   defp select_random_season do
     seasons =
       from(a in Appearance,
@@ -436,38 +429,48 @@ defmodule Invincibles.Game.SimEngine do
     |> Enum.shuffle()
   end
 
-  # Calculates dynamic rating strength for an opponent club based on top players' stats
-  defp calculate_opponent_strengths(club_id, season) do
-    apps =
+  # Batch fetches all appearances for a season in ONE query, then computes
+  # strengths for each club in Elixir. Replaces the N+1 pattern of querying
+  # per-club (20 queries → 1 query).
+  defp batch_calculate_opponent_strengths(clubs, season) do
+    club_ids = Enum.map(clubs, & &1.id)
+
+    all_apps =
       from(a in Appearance,
         join: p in assoc(a, :player),
-        where: a.club_id == ^club_id and a.season == ^season,
+        where: a.club_id in ^club_ids and a.season == ^season,
         order_by: [desc: a.ovr],
         preload: [:player]
       )
       |> Repo.all()
 
-    # Group top players by position to calculate strengths
-    gks = Enum.filter(apps, &(&1.player.primary_position == "GK")) |> Enum.take(1)
-    dfs = Enum.filter(apps, &(&1.player.primary_position == "DF")) |> Enum.take(4)
-    mfs = Enum.filter(apps, &(&1.player.primary_position == "MF")) |> Enum.take(4)
-    fws = Enum.filter(apps, &(&1.player.primary_position == "FW")) |> Enum.take(2)
+    # Group by club_id, then calculate strengths per club
+    apps_by_club = Enum.group_by(all_apps, & &1.club_id)
 
-    lineup = %{
-      gk: List.first(gks),
-      lb: Enum.at(dfs, 0),
-      cb1: Enum.at(dfs, 1),
-      cb2: Enum.at(dfs, 2),
-      rb: Enum.at(dfs, 3),
-      lm: Enum.at(mfs, 0),
-      cm: Enum.at(mfs, 1),
-      rm: Enum.at(mfs, 2),
-      cm1: Enum.at(mfs, 3),
-      lw: Enum.at(fws, 0),
-      st: Enum.at(fws, 1)
-    }
+    Enum.into(clubs, %{}, fn club ->
+      apps = Map.get(apps_by_club, club.id, [])
 
-    calculate_strengths(lineup)
+      gks = Enum.filter(apps, &(&1.player.primary_position == "GK")) |> Enum.take(1)
+      dfs = Enum.filter(apps, &(&1.player.primary_position == "DF")) |> Enum.take(4)
+      mfs = Enum.filter(apps, &(&1.player.primary_position == "MF")) |> Enum.take(4)
+      fws = Enum.filter(apps, &(&1.player.primary_position == "FW")) |> Enum.take(2)
+
+      lineup = %{
+        gk: List.first(gks),
+        lb: Enum.at(dfs, 0),
+        cb1: Enum.at(dfs, 1),
+        cb2: Enum.at(dfs, 2),
+        rb: Enum.at(dfs, 3),
+        lm: Enum.at(mfs, 0),
+        cm: Enum.at(mfs, 1),
+        rm: Enum.at(mfs, 2),
+        cm1: Enum.at(mfs, 3),
+        lw: Enum.at(fws, 0),
+        st: Enum.at(fws, 1)
+      }
+
+      {club.id, calculate_strengths(lineup)}
+    end)
   end
 
   # Simulates match against specific opponent strengths
