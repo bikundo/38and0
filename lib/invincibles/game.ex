@@ -412,4 +412,75 @@ defmodule Invincibles.Game do
         :cm
     end
   end
+
+  alias Invincibles.Game.Share
+
+  @doc """
+  Creates a share record, serializing the lineup map to slot name => appearance ID.
+  """
+  def create_share(lineup, formation, season_record, season_label, funny_quote) do
+    lineup_ids =
+      Enum.reduce(lineup, %{}, fn {slot, app}, acc ->
+        case app do
+          nil -> Map.put(acc, Atom.to_string(slot), nil)
+          %Appearance{id: id} -> Map.put(acc, Atom.to_string(slot), id)
+        end
+      end)
+
+    %Share{}
+    |> Share.changeset(%{
+      formation: formation,
+      lineup: lineup_ids,
+      season_record: season_record,
+      season_label: season_label,
+      funny_quote: funny_quote
+    })
+    |> Repo.insert()
+  end
+
+  @doc """
+  Fetches a share record. Automatically checks if the record has expired (48 hours).
+  If expired, deletes it and returns :error.
+  Otherwise reconstructs the lineup with preloaded appearances.
+  """
+  def get_share(id) do
+    case Repo.get(Share, id) do
+      nil ->
+        :error
+
+      share ->
+        inserted_at = DateTime.from_naive!(share.inserted_at, "Etc/UTC")
+        diff_seconds = DateTime.diff(DateTime.utc_now(), inserted_at)
+
+        if diff_seconds >= 172_800 do
+          Repo.delete(share)
+          :error
+        else
+          app_ids =
+            share.lineup
+            |> Map.values()
+            |> Enum.reject(&is_nil/1)
+
+          appearances =
+            from(a in Appearance,
+              where: a.id in ^app_ids,
+              preload: [:player, :club]
+            )
+            |> Repo.all()
+            |> Map.new(fn app -> {app.id, app} end)
+
+          reconstructed_lineup =
+            Enum.reduce(share.lineup, %{}, fn {slot_str, app_id}, acc ->
+              slot_atom = String.to_existing_atom(slot_str)
+              app_struct = if app_id, do: Map.get(appearances, app_id), else: nil
+              Map.put(acc, slot_atom, app_struct)
+            end)
+
+          season_record_atoms =
+            Map.new(share.season_record, fn {k, v} -> {String.to_existing_atom(k), v} end)
+
+          {:ok, %{share | lineup: reconstructed_lineup, season_record: season_record_atoms}}
+        end
+    end
+  end
 end

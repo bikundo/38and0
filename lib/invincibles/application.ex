@@ -12,8 +12,8 @@ defmodule Invincibles.Application do
       Invincibles.Repo,
       {DNSCluster, query: Application.get_env(:invincibles, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Invincibles.PubSub},
-      # Start a worker by calling: Invincibles.Worker.start_link(arg)
-      # {Invincibles.Worker, arg},
+      # Start share cleanup worker
+      Invincibles.Game.ShareCleanupWorker,
       # Start to serve requests, typically the last entry
       InvinciblesWeb.Endpoint
     ]

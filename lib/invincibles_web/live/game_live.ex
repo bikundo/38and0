@@ -223,6 +223,29 @@ defmodule InvinciblesWeb.GameLive do
   end
 
   @impl true
+  def handle_event("share_lineup", _params, socket) do
+    lineup = socket.assigns.lineup
+    formation = socket.assigns.formation
+    record = socket.assigns.season_record
+
+    season_label =
+      if socket.assigns.sim_results,
+        do: Map.get(socket.assigns.sim_results, :season_label, ""),
+        else: ""
+
+    funny_quote = get_funny_quote(record)
+
+    case Game.create_share(lineup, formation, record, season_label, funny_quote) do
+      {:ok, share} ->
+        url = url(~p"/share/#{share.id}")
+        {:noreply, push_event(socket, "share_url", %{url: url})}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Failed to generate share link.")}
+    end
+  end
+
+  @impl true
   def handle_event("simulate_season", _params, socket) do
     # Calculate squad aggregates and run the simulator
     strengths = SimEngine.calculate_strengths(socket.assigns.lineup)
@@ -1073,4 +1096,6 @@ defmodule InvinciblesWeb.GameLive do
     </Layouts.app>
     """
   end
+
+  def formation_layouts, do: @formation_layouts
 end

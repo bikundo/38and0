@@ -330,6 +330,21 @@ const Hooks = {
   ShareButton: {
     mounted() {
       this.el.addEventListener("click", () => {
+        const originalText = this.el.innerHTML;
+        this.el.disabled = true;
+        this.el.innerHTML = "Generating Link...";
+
+        this.pushEvent("share_lineup", {});
+
+        this._originalText = originalText;
+      });
+
+      this.handleEvent("share_url", ({ url }) => {
+        this.el.disabled = false;
+        if (this._originalText) {
+          this.el.innerHTML = this._originalText;
+        }
+
         const wins = this.el.dataset.wins || "0";
         const draws = this.el.dataset.draws || "0";
         const losses = this.el.dataset.losses || "0";
@@ -337,7 +352,7 @@ const Hooks = {
         const season = this.el.dataset.season ? ` (${this.el.dataset.season})` : "";
         const quote = this.el.dataset.quote || "";
 
-        let text = `Can you build a squad and go 38-0-0? Check out my Invincibles campaign!\n\nRecord: ${wins}W - ${draws}D - ${losses}L | ${points} Pts${season} ⚽🏆`;
+        let text = `Can you build a squad and go 38-0-0? Check out my Invincibles campaign!\n\nLink: ${url}\n\nRecord: ${wins}W - ${draws}D - ${losses}L | ${points} Pts${season} ⚽🏆`;
         if (quote) {
           text += `\n\n"${quote}"`;
         }
