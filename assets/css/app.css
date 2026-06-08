@@ -273,3 +273,70 @@ body {
   box-shadow: 0 0 6px rgba(0,0,0,0.12), 0 4px 6px rgba(0,0,0,0.07);
 }
 
+/* ─── Custom easing curves (Emil Kowalski) ─────────────────────────── */
+:root {
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-expo: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+/* ─── Spin Wheel Animation ─────────────────────────────────────────── */
+
+/* The icon makes 3 full rotations then eases out with a satisfying 
+   deceleration — starts fast, ends with just-barely-stopping physics */
+@keyframes spin-wheel {
+  0%   { transform: rotate(0deg) scale(0.95); opacity: 0.6; }
+  15%  { transform: rotate(180deg) scale(1.08); opacity: 1; }
+  60%  { transform: rotate(900deg) scale(1.04); }
+  85%  { transform: rotate(1050deg) scale(1.01); }
+  100% { transform: rotate(1080deg) scale(1); opacity: 1; }
+}
+
+/* Container icon box pulses slightly during spin */
+@keyframes spin-container-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(0, 117, 74, 0); }
+  40%  { box-shadow: 0 0 0 6px rgba(0, 117, 74, 0.15); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 117, 74, 0); }
+}
+
+.spin-icon-spinning {
+  animation:
+    spin-wheel 700ms var(--ease-out-expo) forwards;
+}
+
+.spin-container-spinning {
+  animation: spin-container-pulse 700ms var(--ease-out-expo) forwards;
+}
+
+/* Result card reveal — staggered slide-up from scale(0.95) */
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.spin-result-reveal {
+  animation: reveal-up 240ms var(--ease-out-expo) both;
+}
+
+/* Button press: scale(0.97) is Emil's preference for pressable elements */
+.btn-spin-wheel:active {
+  transform: scale(0.97);
+}
+
+/* Reduced motion: keep opacity fade, remove position/transform animation */
+@media (prefers-reduced-motion: reduce) {
+  .spin-icon-spinning {
+    animation: none;
+  }
+  .spin-container-spinning {
+    animation: none;
+  }
+  .spin-result-reveal {
+    animation: none;
+  }
+}

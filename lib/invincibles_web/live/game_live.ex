@@ -111,16 +111,30 @@ defmodule InvinciblesWeb.GameLive do
   @impl true
   def handle_event("start_game", _params, socket) do
     formation = socket.assigns.formation
-    socket = reset_state(socket) |> assign(:formation, formation)
 
+    socket =
+      reset_state(socket)
+      |> assign(:formation, formation)
+      |> assign(:step, :spinning)
+      |> push_event("auto_spin", %{})
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("spin_wheel", _params, socket) do
     case Game.spin_wheel() do
       {:ok, club, season, appearances} ->
+        # IMPORTANT: do NOT assign step: :drafting here.
+        # If we do, LiveView removes the :spinning DOM (and the SpinWheel hook)
+        # before spin_result_ready is received — so handleEvent never fires.
+        # We keep the hook alive and let it call animation_done when ready.
         socket =
           socket
           |> assign(:current_spin, {club, season})
           |> assign(:draft_pool, appearances)
-          |> assign(:step, :drafting)
           |> clear_flash()
+          |> push_event("spin_result_ready", %{club: club.name, season: season})
 
         {:noreply, socket}
 
@@ -135,26 +149,11 @@ defmodule InvinciblesWeb.GameLive do
   end
 
   @impl true
-  def handle_event("spin_wheel", _params, socket) do
-    case Game.spin_wheel() do
-      {:ok, club, season, appearances} ->
-        socket =
-          socket
-          |> assign(:current_spin, {club, season})
-          |> assign(:draft_pool, appearances)
-          |> assign(:step, :drafting)
-          |> clear_flash()
-
-        {:noreply, socket}
-
-      {:error, _reason} ->
-        {:noreply,
-         put_flash(
-           socket,
-           :error,
-           "Failed to load database players. Make sure the database is seeded."
-         )}
-    end
+  def handle_event("animation_done", _params, socket) do
+    # Called by the JS hook after the overlay has fully dismissed.
+    # Now safe to transition to :drafting — the overlay is gone, the
+    # player list will be revealed cleanly.
+    {:noreply, assign(socket, :step, :drafting)}
   end
 
   @impl true
@@ -659,11 +658,11 @@ defmodule InvinciblesWeb.GameLive do
                   <div class="w-12 h-12 mx-auto bg-[#edebe9] border border-[rgba(0,0,0,0.08)] rounded-[12px] flex items-center justify-center mb-4">
                     <.icon name="hero-trophy" class="w-6 h-6 text-[#00754A]" />
                   </div>
-                  <h2 class="text-lg font-bold tracking-tight mb-2 text-[#006241]">
+                  <h2 class="text-[20px] font-bold tracking-tight mb-2 text-[#006241]">
                     Can you build an Invincible squad?
                   </h2>
                   <p class="text-xs text-[rgba(0,0,0,0.58)] leading-relaxed mb-6">
-                    Draft an 11-man squad using historical Premier League players. Each draft spin gives you 4 random players matching a specific Club + Decade constraint. Try to win all 38 games to go down in history.
+                    Draft an 11-man squad using historical Premier League players. Each round, you spin the wheel to draw a random club and season, then draft from eligible players. Go undefeated over a 38-game season to cement your status as an Invincible.
                   </p>
 
                   <%!-- Formation Selection --%>
@@ -711,27 +710,31 @@ defmodule InvinciblesWeb.GameLive do
 
               <%= if @step == :spinning do %>
                 <div class="text-center py-6">
-                  <div class="w-12 h-12 mx-auto bg-[#faf6ee] border border-[#dfc49d] rounded-[12px] flex items-center justify-center mb-4">
-                    <.icon name="hero-arrow-path" class="w-6 h-6 text-[#cba258]" />
+                  <div
+                    id="spin-wheel-container"
+                    class="w-14 h-14 mx-auto bg-[#edebe9] border border-[rgba(0,0,0,0.08)] rounded-full flex items-center justify-center mb-4 shadow-sm"
+                  >
+                    <.icon name="hero-arrow-path" class="w-6 h-6 text-[#00754A]" />
                   </div>
-                  <h2 class="text-lg font-bold tracking-tight mb-2 text-[#006241]">
-                    Spin for your Constraints
+                  <h2 class="text-[20px] font-bold tracking-tight mb-2 text-[#006241]">
+                    Draw Club & Season
                   </h2>
-                  <p class="text-xs text-[rgba(0,0,0,0.58)] leading-relaxed mb-6">
-                    Spin the wheel to get a randomized combination of a Premier League Club and historical Era.
+                  <p class="text-xs text-[rgba(0,0,0,0.58)] leading-relaxed mb-6 max-w-xs mx-auto">
+                    Every player draft pick is restricted to a specific Premier League club and season. Spin the wheel to reveal your next requirement.
                   </p>
                   <div class="flex flex-col gap-2.5">
                     <button
-                      phx-click="spin_wheel"
-                      class="w-full btn-starbucks btn-starbucks-filled text-sm"
+                      id="spin-btn"
+                      phx-hook="SpinWheel"
+                      class="w-full btn-starbucks btn-starbucks-filled btn-spin-wheel text-sm"
                     >
-                      SPIN THE WHEEL
+                      Spin the Wheel
                     </button>
                     <button
                       phx-click="auto_draft"
                       class="w-full btn-starbucks btn-starbucks-black text-sm"
                     >
-                      AUTO DRAFT REMAINING
+                      Auto Draft Remaining
                     </button>
                   </div>
                 </div>
@@ -741,7 +744,7 @@ defmodule InvinciblesWeb.GameLive do
                 <div>
                   <div class="flex items-center justify-between border-b border-[rgba(0,0,0,0.08)] pb-3 mb-4">
                     <span class="text-[11px] font-semibold text-[rgba(0,0,0,0.58)] uppercase tracking-[0.6px]">
-                      Current Constraints
+                      Active Club & Season
                     </span>
                     <span class="text-[#00754A] text-[11px] font-semibold uppercase tracking-[0.6px]">
                       Drafting
@@ -750,7 +753,10 @@ defmodule InvinciblesWeb.GameLive do
 
                   <%= if @current_spin do %>
                     <% {club, season} = @current_spin %>
-                    <div class="flex items-center justify-between bg-[#edebe9] border border-[rgba(0,0,0,0.08)] rounded-lg p-3.5 mb-4">
+                    <div
+                      id="spin-result-card"
+                      class="flex items-center justify-between bg-[#edebe9] border border-[rgba(0,0,0,0.08)] rounded-lg p-3.5 mb-4"
+                    >
                       <span class="font-bold text-sm text-[rgba(0,0,0,0.87)]">{club.name}</span>
                       <span class="text-[rgba(0,0,0,0.58)] text-xs font-semibold uppercase tracking-[0.6px]">
                         {season}
@@ -790,7 +796,7 @@ defmodule InvinciblesWeb.GameLive do
                   <%= if Enum.empty?(@draft_pool) do %>
                     <div class="text-center py-6 bg-[#edebe9] rounded-lg border border-dashed border-[rgba(0,0,0,0.12)]">
                       <p class="text-xs text-[rgba(0,0,0,0.58)] mb-4">
-                        No eligible historical players found for this Club + Year constraint.
+                        No historical players found for this club and season.
                       </p>
                       <div class="flex flex-col gap-2">
                         <button

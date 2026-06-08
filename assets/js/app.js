@@ -118,6 +118,216 @@ function oklabToRgb(oklabStr) {
 }
 
 const Hooks = {
+  SpinWheel: {
+    mounted() {
+      // ─── Decorative scroll items (the reel spins through these) ──────────
+      // The LANDING item is always updated with the real DB result before
+      // the reel decelerates to it — so the user sees the actual club+season.
+      const CLUBS = [
+        "Arsenal FC", "Chelsea FC", "Man United", "Liverpool FC", "Man City",
+        "Tottenham", "Everton FC", "Newcastle Utd", "Aston Villa", "Leeds United",
+        "Blackburn Rvrs", "Leicester City", "West Ham Utd", "Southampton", "Fulham FC",
+        "Wolves", "Norwich City", "Ipswich Town", "Derby County", "Coventry City",
+      ];
+      const SEASONS = [
+        "1992–93", "1993–94", "1994–95", "1995–96", "1996–97",
+        "1997–98", "1998–99", "1999–00", "2000–01", "2001–02",
+        "2002–03", "2003–04", "2004–05", "2005–06", "2006–07",
+        "2007–08", "2008–09", "2009–10", "2010–11", "2011–12",
+        "2012–13", "2013–14", "2014–15", "2015–16", "2016–17",
+        "2017–18", "2018–19",
+      ];
+
+      const ITEM_H = 56;
+      const VISIBLE = 5;
+      const REEL_H = ITEM_H * VISIBLE;
+      const CENTER_OFFSET = Math.floor(VISIBLE / 2); // = 2
+      const FAST_MS = 1000;   // phase 1: constant fast scroll
+      const DECEL_MS = 1600;  // phase 2: easeOutQuint deceleration
+      const TOTAL_MS = FAST_MS + DECEL_MS;
+      const FAST_SPEED = 1.8; // px/ms
+      const fastDistance = FAST_MS * FAST_SPEED; // = 1800px
+
+      const easeOutQuint = t => 1 - Math.pow(1 - t, 5);
+
+      // ─── Shared spin state ────────────────────────────────────────────────
+      // Set when animation starts, read in spin_result_ready handler
+      let spinState = null;
+
+      // ─── Build a reel ─────────────────────────────────────────────────────
+      const buildReel = (items, label) => {
+        // Build pool: enough repetitions for a satisfying spin
+        const pool = [];
+        for (let i = 0; i < 6; i++) pool.push(...items);
+
+        // landingIdx: the item that will be centered when the reel stops.
+        // We keep a DOM reference so we can swap its text before it comes
+        // into view during Phase 2.
+        const landingIdx = pool.length - CENTER_OFFSET - 1;
+
+        const col = document.createElement("div");
+        col.style.cssText = "flex: 1; display: flex; flex-direction: column; gap: 6px;";
+
+        const lbl = document.createElement("div");
+        lbl.style.cssText = "text-align: center; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(0,0,0,0.35); margin-bottom: 4px;";
+        lbl.textContent = label;
+
+        const win = document.createElement("div");
+        win.style.cssText = `position: relative; height: ${REEL_H}px; overflow: hidden; border-radius: 14px; border: 1.5px solid rgba(0,0,0,0.08); background: #f9f9f9;`;
+
+        const maskTop = document.createElement("div");
+        maskTop.style.cssText = `position: absolute; top: 0; left: 0; right: 0; height: ${ITEM_H * 1.5}px; background: linear-gradient(to bottom, rgba(249,249,249,1) 0%, transparent 100%); z-index: 3; pointer-events: none; border-radius: 14px 14px 0 0;`;
+        const maskBot = document.createElement("div");
+        maskBot.style.cssText = `position: absolute; bottom: 0; left: 0; right: 0; height: ${ITEM_H * 1.5}px; background: linear-gradient(to top, rgba(249,249,249,1) 0%, transparent 100%); z-index: 3; pointer-events: none; border-radius: 0 0 14px 14px;`;
+
+        const highlight = document.createElement("div");
+        highlight.style.cssText = `position: absolute; top: ${ITEM_H * CENTER_OFFSET}px; left: 6px; right: 6px; height: ${ITEM_H}px; border: 2px solid rgba(0,117,74,0.25); background: rgba(0,117,74,0.04); border-radius: 10px; z-index: 2; pointer-events: none; transition: border-color 300ms ease, background 300ms ease;`;
+
+        const list = document.createElement("div");
+        list.style.cssText = "will-change: transform; transform: translateY(0);";
+
+        let landingEl = null;
+        pool.forEach((item, i) => {
+          const el = document.createElement("div");
+          el.style.cssText = `height: ${ITEM_H}px; display: flex; align-items: center; justify-content: center; font-family: var(--font-sans, Inter, sans-serif); font-size: 13px; font-weight: 700; color: rgba(0,0,0,0.75); letter-spacing: -0.01em; padding: 0 8px; text-align: center;`;
+          el.textContent = item;
+          if (i === landingIdx) landingEl = el;
+          list.appendChild(el);
+        });
+
+        win.appendChild(maskTop);
+        win.appendChild(maskBot);
+        win.appendChild(highlight);
+        win.appendChild(list);
+        col.appendChild(lbl);
+        col.appendChild(win);
+
+        // scrollTarget: how far translateY needs to go so landingIdx is centered
+        const scrollTarget = (landingIdx - CENTER_OFFSET) * ITEM_H;
+        const decelDist = Math.max(0, scrollTarget - fastDistance);
+
+        return { col, list, highlight, landingEl, scrollTarget, decelDist };
+      };
+
+      // ─── Show the slot machine overlay ────────────────────────────────────
+      const showSlotMachine = () => {
+        const overlay = document.createElement("div");
+        overlay.id = "slot-machine-overlay";
+        overlay.style.cssText = "position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.55); backdrop-filter: blur(6px); opacity: 0; transition: opacity 220ms cubic-bezier(0.16,1,0.3,1);";
+
+        const card = document.createElement("div");
+        card.style.cssText = "background: #fff; border-radius: 22px; padding: 28px 24px 32px; width: min(360px,92vw); box-shadow: 0 32px 80px rgba(0,0,0,0.35); transform: scale(0.94) translateY(12px); transition: transform 280ms cubic-bezier(0.16,1,0.3,1);";
+
+        const heading = document.createElement("div");
+        heading.style.cssText = "text-align: center; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(0,0,0,0.35); margin-bottom: 22px;";
+        heading.textContent = "Drawing Club & Season";
+
+        const reelsRow = document.createElement("div");
+        reelsRow.style.cssText = "display: flex; gap: 12px;";
+
+        const clubReel = buildReel(CLUBS, "Club");
+        const seasonReel = buildReel(SEASONS, "Season");
+        reelsRow.appendChild(clubReel.col);
+        reelsRow.appendChild(seasonReel.col);
+
+        card.appendChild(heading);
+        card.appendChild(reelsRow);
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+
+        // Fade in
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          overlay.style.opacity = "1";
+          card.style.transform = "scale(1) translateY(0)";
+        }));
+
+        // ─── Two-phase reel animation ─────────────────────────────────────
+        const spinStart = performance.now();
+        let animResolved = false;
+
+        const animate = (ts) => {
+          const elapsed = ts - spinStart;
+          let clubY, seasonY;
+
+          if (elapsed <= FAST_MS) {
+            // Phase 1: constant speed
+            clubY = (elapsed / FAST_MS) * fastDistance;
+            seasonY = clubY;
+          } else {
+            // Phase 2: easeOutQuint deceleration
+            const t = Math.min((elapsed - FAST_MS) / DECEL_MS, 1);
+            const eased = easeOutQuint(t);
+            clubY = fastDistance + eased * clubReel.decelDist;
+            seasonY = fastDistance + eased * seasonReel.decelDist;
+
+            if (t >= 1 && !animResolved) {
+              animResolved = true;
+              // Flash highlights green — reel has locked in
+              clubReel.highlight.style.borderColor = "rgba(0,117,74,0.7)";
+              clubReel.highlight.style.background = "rgba(0,117,74,0.07)";
+              seasonReel.highlight.style.borderColor = "rgba(0,117,74,0.7)";
+              seasonReel.highlight.style.background = "rgba(0,117,74,0.07)";
+            }
+          }
+
+          clubReel.list.style.transform = `translateY(-${clubY}px)`;
+          seasonReel.list.style.transform = `translateY(-${seasonY}px)`;
+
+          if (elapsed < TOTAL_MS) requestAnimationFrame(animate);
+        };
+
+        requestAnimationFrame(animate);
+
+        return { overlay, clubReel, seasonReel, spinStart };
+      };
+
+      // ─── Shared spin trigger ──────────────────────────────────────────────
+      const triggerSpin = () => {
+        if (this.el.dataset.spinning === "true") return;
+        this.el.dataset.spinning = "true";
+
+        spinState = showSlotMachine();
+
+        // Push to LiveView early so the result arrives during Phase 1,
+        // giving us time to update the landing element before it scrolls in
+        setTimeout(() => this.pushEvent("spin_wheel", {}), 800);
+
+        setTimeout(() => { this.el.dataset.spinning = "false"; }, TOTAL_MS + 100);
+      };
+
+      this.el.addEventListener("click", triggerSpin);
+
+      this.handleEvent("auto_spin", () => setTimeout(triggerSpin, 50));
+
+      // ─── Receive real result, update the landing items, then dismiss ───────
+      this.handleEvent("spin_result_ready", ({ club, season }) => {
+        if (!spinState) return;
+        const { overlay, clubReel, seasonReel, spinStart } = spinState;
+
+        // Swap the landing element text to the real DB result.
+        // This item is still scrolled offscreen at this point (early in Phase 2),
+        // so the user never sees the swap — they just see the correct name stop in center.
+        if (clubReel.landingEl) clubReel.landingEl.textContent = club;
+        if (seasonReel.landingEl) seasonReel.landingEl.textContent = season;
+
+        // Calculate remaining animation time and add 1s linger after it stops
+        const elapsed = performance.now() - spinStart;
+        const msLeft = Math.max(0, TOTAL_MS - elapsed);
+
+        setTimeout(() => {
+          if (!overlay) return;
+          overlay.style.opacity = "0";
+          overlay.style.transition = "opacity 300ms cubic-bezier(0.16,1,0.3,1)";
+          setTimeout(() => {
+            overlay.remove();
+            spinState = null;
+            this.pushEvent("animation_done", {});
+          }, 320);
+        }, msLeft + 1000); // wait for reel to stop + 1s
+      });
+    }
+  },
+
   ShareButton: {
     mounted() {
       this.el.addEventListener("click", () => {
