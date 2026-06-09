@@ -28,16 +28,9 @@ defmodule Invincibles.Game.SimEngineTest do
   test "calculate_strengths/1 calculates correct values", %{lineup: lineup} do
     strengths = SimEngine.calculate_strengths(lineup)
 
-    # Attack Strength = Average forward SHO (95 * 0.7 = 66.5) + Average midfielder PAS (90 * 0.3 = 27.0) = 93.5
     assert strengths.attack == 93.5
-
-    # Control Strength = Average midfielder (DRI+PAS)/2 (90 * 0.7 = 63.0) + Average defender PAS (80 * 0.3 = 24.0) = 87.0
     assert strengths.control == 87.0
-
-    # Defensive Strength = Average defender (DEF+PHY)/2 (90 * 0.7 = 63.0) + Average midfielder DEF (80 * 0.3 = 24.0) = 87.0
     assert strengths.defense == 87.0
-
-    # Goalkeeping Strength = Average of GK stats = (90+90+80+90+60+90)/6 = 500/6 = 83.333
     assert_in_delta strengths.gk, 83.333, 0.001
   end
 

@@ -21,12 +21,8 @@ defmodule Invincibles.Game do
       "Tottenham Hotspur"
     ]
 
-    # Bias: 70% chance of choosing a Top 6 club, 30% chance of any club.
-    # To keep draft quality high, we only select club/seasons with at least 5 players of OVR >= 80.
     use_top_6? = :rand.uniform(100) <= 70
 
-    # Fetch all valid (club_id, season) pairs — small result set after GROUP BY/HAVING —
-    # then pick randomly in Elixir to avoid ORDER BY RANDOM() sort overhead under load.
     query =
       if use_top_6? do
         from(a in Appearance,
@@ -50,7 +46,6 @@ defmodule Invincibles.Game do
 
     case valid_pairs do
       [] ->
-        # Fallback: pick any appearance at all
         count = Repo.aggregate(Appearance, :count, :id)
 
         if count == 0 do
@@ -80,7 +75,6 @@ defmodule Invincibles.Game do
   end
 
   defp fetch_appearances_for_spin(club, season) do
-    # Fetch appearances for that club and season (OVR >= 80 only, big-name players)
     appearances =
       from(a in Appearance,
         where: a.club_id == ^club.id and a.season == ^season and a.ovr >= 80,
@@ -126,7 +120,6 @@ defmodule Invincibles.Game do
         lineup,
         active_slots \\ [:gk, :lb, :cb1, :cb2, :rb, :lm, :cm, :rm, :lw, :st, :rw]
       ) do
-    # Map each slot to its preferred specific position key(s)
     slot_preferences = %{
       gk: [:gk],
       lb: [:lb],
@@ -147,12 +140,10 @@ defmodule Invincibles.Game do
       st2: [:st]
     }
 
-    # Collect already-drafted player IDs to exclude
     already_drafted =
       Enum.map(lineup, fn {_, app} -> if app, do: app.player_id, else: nil end)
       |> Enum.reject(&is_nil/1)
 
-    # Determine which position categories we actually need
     empty_slots = Enum.filter(active_slots, fn slot -> is_nil(Map.get(lineup, slot)) end)
 
     if Enum.empty?(empty_slots) do
@@ -169,7 +160,6 @@ defmodule Invincibles.Game do
         end)
         |> Enum.uniq()
 
-      # Single batch query: fetch ALL draftable candidates across needed categories
       all_candidates =
         from(a in Appearance,
           join: p in assoc(a, :player),
@@ -181,10 +171,8 @@ defmodule Invincibles.Game do
         |> Repo.all()
         |> Enum.shuffle()
 
-      # Group candidates by position category for fast lookup
       candidates_by_category = Enum.group_by(all_candidates, & &1.player.primary_position)
 
-      # Now fill slots purely in memory — no more DB queries
       Enum.reduce(empty_slots, {lineup, already_drafted}, fn slot,
                                                              {current_lineup, drafted_ids} ->
         category =
@@ -197,20 +185,17 @@ defmodule Invincibles.Game do
 
         preferred_specs = Map.get(slot_preferences, slot, [])
 
-        # Filter candidates: not already drafted in this run
         base_candidates =
           Map.get(candidates_by_category, category, [])
           |> Enum.reject(fn app -> app.player_id in drafted_ids end)
           |> Enum.take(30)
 
-        # Try to find candidates matching preferred sub-positions (inferred from stats)
         specific_candidates =
           base_candidates
           |> Enum.filter(fn app ->
             infer_sub_position(app) in preferred_specs
           end)
 
-        # Choose from specific matching, or fall back to any candidate of general category
         final_candidates =
           if Enum.empty?(specific_candidates) do
             base_candidates
@@ -231,8 +216,6 @@ defmodule Invincibles.Game do
     end
   end
 
-  # Infers a player's natural sub-position from their stats and primary position.
-  # Works for every player — no hardcoded name lists needed.
   defp infer_sub_position(appearance) do
     pos = appearance.player.primary_position
     stats = appearance.stats || %{}
@@ -246,18 +229,13 @@ defmodule Invincibles.Game do
         def_stat = Map.get(stats, "def", 50)
         phy = Map.get(stats, "phy", 50)
 
-        # Fullbacks tend to have high pace relative to their defending/physicality.
-        # Centre-backs are slower but stronger defensively.
         if pac > (def_stat + phy) / 2 do
-          # Fullback — assign roughly evenly to :lb and :rb
           if rem(appearance.id, 2) == 0, do: :lb, else: :rb
         else
           :cb
         end
 
       "MF" ->
-        # Central midfielders by default — the slot preference system already
-        # maps :lm to [:lw, :cm] and :rm to [:rw, :cm], so CMs fill wide slots too
         :cm
 
       "FW" ->
@@ -265,11 +243,9 @@ defmodule Invincibles.Game do
         pac = Map.get(stats, "pac", 50)
         dri = Map.get(stats, "dri", 50)
 
-        # Strikers have elite shooting; wingers rely more on pace and dribbling
         if sho >= pac and sho >= dri do
           :st
         else
-          # Winger — assign roughly evenly to :lw and :rw
           if rem(appearance.id, 2) == 0, do: :lw, else: :rw
         end
 

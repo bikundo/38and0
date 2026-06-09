@@ -18,8 +18,6 @@ defmodule Invincibles.Game.SimEngine do
   Calculates the aggregate strengths for a user lineup.
   """
   def calculate_strengths(lineup) do
-    # Extract players by position group dynamically.
-    # Support both database appearances (preloaded with :player) and mock test maps (key-based lookups).
     all_players = Map.values(lineup) |> Enum.reject(&is_nil/1)
 
     has_player_structs? = Enum.any?(all_players, &Map.has_key?(&1, :player))
@@ -68,26 +66,21 @@ defmodule Invincibles.Game.SimEngine do
         {gks, dfs, mfs, fws}
       end
 
-    # Attack Strength = Average forward SHO * 0.7 + Average midfielder PAS * 0.3
     fw_sho = avg_stat_sum(fws, ["sho"], 50)
     mf_pas = avg_stat_sum(mfs, ["pas"], 50)
     attack_strength = fw_sho * 0.7 + mf_pas * 0.3
 
-    # Control Strength = Average midfielder (DRI + PAS)/2 * 0.7 + Average defender PAS * 0.3
     mf_dri_pas = avg_stat_sum(mfs, ["dri", "pas"], 50)
     df_pas = avg_stat_sum(dfs, ["pas"], 50)
     control_strength = mf_dri_pas * 0.7 + df_pas * 0.3
 
-    # Defensive Strength = Average defender (DEF + PHY)/2 * 0.7 + Average midfielder DEF * 0.3
     df_def_phy = avg_stat_sum(dfs, ["def", "phy"], 50)
     mf_def = avg_stat_sum(mfs, ["def"], 50)
     defensive_strength = df_def_phy * 0.7 + mf_def * 0.3
 
-    # Goalkeeping Strength = GK's baseline attributes
     gk_strength =
       case gks do
         [gk] ->
-          # Average of div, han, kic, ref, spd, pos
           stats = gk.stats || %{}
           div = Map.get(stats, "div", 50)
           han = Map.get(stats, "han", 50)
@@ -134,10 +127,8 @@ defmodule Invincibles.Game.SimEngine do
   Returns `{:win | :draw | :loss, user_goals, opp_goals}`.
   """
   def simulate_match(user_strengths) do
-    # Simulates 10 possessions per match
     {user_goals, opp_goals} =
       Enum.reduce(1..10, {0, 0}, fn _possession_index, {u_goals, o_goals} ->
-        # 1. Control check with random variance
         user_variance = 0.7 + :rand.uniform() * 0.6
         opp_variance = 0.7 + :rand.uniform() * 0.6
 
@@ -145,7 +136,6 @@ defmodule Invincibles.Game.SimEngine do
         opp_control = @opponent_baseline.control * opp_variance
 
         if user_control >= opp_control do
-          # User attacks
           if score_check?(
                user_strengths.attack,
                @opponent_baseline.defense,
@@ -156,7 +146,6 @@ defmodule Invincibles.Game.SimEngine do
             {u_goals, o_goals}
           end
         else
-          # Opponent attacks
           if score_check?(@opponent_baseline.attack, user_strengths.defense, user_strengths.gk) do
             {u_goals, o_goals + 1}
           else
@@ -175,10 +164,7 @@ defmodule Invincibles.Game.SimEngine do
     {result, user_goals, opp_goals}
   end
 
-  # Check if an attack results in a goal
   defp score_check?(attack_strength, defense_strength, gk_strength) do
-    # Divide differences by 2.0 to scale variance realistically and prevent runaway scoring.
-    # Balanced 80 OVR teams have a ~21% chance of scoring per possession.
     diff = (attack_strength - defense_strength) / 2.0
     gk_diff = (gk_strength - 80.0) / 2.0
 
