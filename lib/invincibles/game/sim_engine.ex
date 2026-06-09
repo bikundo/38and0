@@ -8,9 +8,9 @@ defmodule Invincibles.Game.SimEngine do
   alias Invincibles.Game.Club
 
   @opponent_baseline %{
-    attack: 360.0,
-    control: 576.0,
-    defense: 760.0,
+    attack: 80.0,
+    control: 80.0,
+    defense: 80.0,
     gk: 80.0
   }
 
@@ -68,20 +68,20 @@ defmodule Invincibles.Game.SimEngine do
         {gks, dfs, mfs, fws}
       end
 
-    # Attack Strength = Sum of forwards' SHO + (midfielders' PAS * 0.5)
-    fw_sho = sum_stat(fws, "sho")
-    mf_pas = sum_stat(mfs, "pas")
-    attack_strength = fw_sho + mf_pas * 0.5
+    # Attack Strength = Average forward SHO * 0.7 + Average midfielder PAS * 0.3
+    fw_sho = avg_stat_sum(fws, ["sho"], 50)
+    mf_pas = avg_stat_sum(mfs, ["pas"], 50)
+    attack_strength = fw_sho * 0.7 + mf_pas * 0.3
 
-    # Control Strength = Sum of midfielders' DRI/PAS + (defenders' PAS * 0.3)
-    mf_dri_pas = sum_stat(mfs, "dri") + sum_stat(mfs, "pas")
-    df_pas = sum_stat(dfs, "pas")
-    control_strength = mf_dri_pas + df_pas * 0.3
+    # Control Strength = Average midfielder (DRI + PAS)/2 * 0.7 + Average defender PAS * 0.3
+    mf_dri_pas = avg_stat_sum(mfs, ["dri", "pas"], 50)
+    df_pas = avg_stat_sum(dfs, ["pas"], 50)
+    control_strength = mf_dri_pas * 0.7 + df_pas * 0.3
 
-    # Defensive Strength = Sum of defenders' DEF/PHY + (midfielders' DEF * 0.5)
-    df_def_phy = sum_stat(dfs, "def") + sum_stat(dfs, "phy")
-    mf_def = sum_stat(mfs, "def")
-    defensive_strength = df_def_phy + mf_def * 0.5
+    # Defensive Strength = Average defender (DEF + PHY)/2 * 0.7 + Average midfielder DEF * 0.3
+    df_def_phy = avg_stat_sum(dfs, ["def", "phy"], 50)
+    mf_def = avg_stat_sum(mfs, ["def"], 50)
+    defensive_strength = df_def_phy * 0.7 + mf_def * 0.3
 
     # Goalkeeping Strength = GK's baseline attributes
     gk_strength =
@@ -109,14 +109,24 @@ defmodule Invincibles.Game.SimEngine do
     }
   end
 
-  # Helper to sum a specific stat key from a list of appearances
-  defp sum_stat(appearances, stat_key) do
-    Enum.reduce(appearances, 0, fn app, acc ->
-      stats = app.stats || %{}
-      # Map keys might be atoms or strings depending on how they are loaded/decoded
-      val = Map.get(stats, stat_key) || Map.get(stats, String.to_atom(stat_key)) || 50
-      acc + val
-    end)
+  # Helper to compute average of the sum of stats for a list of appearances
+  defp avg_stat_sum([], _keys, default_avg), do: default_avg * 1.0
+
+  defp avg_stat_sum(appearances, keys, _default_avg) do
+    total =
+      Enum.reduce(appearances, 0.0, fn app, acc ->
+        stats = app.stats || %{}
+
+        player_sum =
+          Enum.reduce(keys, 0, fn key, key_acc ->
+            val = Map.get(stats, key) || Map.get(stats, String.to_atom(key)) || 50
+            key_acc + val
+          end)
+
+        acc + player_sum / length(keys)
+      end)
+
+    total / length(appearances)
   end
 
   @doc """
@@ -124,9 +134,9 @@ defmodule Invincibles.Game.SimEngine do
   Returns `{:win | :draw | :loss, user_goals, opp_goals}`.
   """
   def simulate_match(user_strengths) do
-    # Simulates 5 possessions per match
+    # Simulates 10 possessions per match
     {user_goals, opp_goals} =
-      Enum.reduce(1..5, {0, 0}, fn _possession_index, {u_goals, o_goals} ->
+      Enum.reduce(1..10, {0, 0}, fn _possession_index, {u_goals, o_goals} ->
         # 1. Control check with random variance
         user_variance = 0.7 + :rand.uniform() * 0.6
         opp_variance = 0.7 + :rand.uniform() * 0.6
@@ -167,16 +177,13 @@ defmodule Invincibles.Game.SimEngine do
 
   # Check if an attack results in a goal
   defp score_check?(attack_strength, defense_strength, gk_strength) do
-    # 2. Shot quality check
-    ratio = attack_strength / max(defense_strength, 1.0)
+    # Divide differences by 2.0 to scale variance realistically and prevent runaway scoring.
+    # Balanced 80 OVR teams have a ~21% chance of scoring per possession.
+    diff = (attack_strength - defense_strength) / 2.0
+    gk_diff = (gk_strength - 80.0) / 2.0
 
-    # 3. Goalkeeper check with Gaussian variance (:rand.normal/0)
-    # Average ratio is ~0.5. Ratio * 150 = ~75.
-    # GK average OVR is 80.
-    # Score value = Ratio * 150 + normal() * 20 - GK
-    # If positive, it's a goal.
-    shot_value = ratio * 150.0 + :rand.normal() * 20.0
-    shot_value > gk_strength
+    shot_value = diff + 80.0 + :rand.normal() * 15.0
+    shot_value > 80.0 + gk_diff + 12.0
   end
 
   @doc """
@@ -476,7 +483,7 @@ defmodule Invincibles.Game.SimEngine do
   # Simulates match against specific opponent strengths
   defp simulate_match_against_opponent(user_strengths, opp_strengths) do
     {user_goals, opp_goals} =
-      Enum.reduce(1..5, {0, 0}, fn _possession, {u_goals, o_goals} ->
+      Enum.reduce(1..10, {0, 0}, fn _possession, {u_goals, o_goals} ->
         user_variance = 0.7 + :rand.uniform() * 0.6
         opp_variance = 0.7 + :rand.uniform() * 0.6
 

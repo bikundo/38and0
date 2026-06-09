@@ -203,11 +203,11 @@ defmodule Invincibles.Game do
           |> Enum.reject(fn app -> app.player_id in drafted_ids end)
           |> Enum.take(30)
 
-        # Try to find candidates matching preferred sub-positions
+        # Try to find candidates matching preferred sub-positions (inferred from stats)
         specific_candidates =
           base_candidates
           |> Enum.filter(fn app ->
-            get_specific_position(app.player.display_name) in preferred_specs
+            infer_sub_position(app) in preferred_specs
           end)
 
         # Choose from specific matching, or fall back to any candidate of general category
@@ -231,248 +231,49 @@ defmodule Invincibles.Game do
     end
   end
 
-  # Helper to identify player's natural sub-position based on name keywords
-  defp get_specific_position(name) do
-    name_lower = String.downcase(name)
+  # Infers a player's natural sub-position from their stats and primary position.
+  # Works for every player — no hardcoded name lists needed.
+  defp infer_sub_position(appearance) do
+    pos = appearance.player.primary_position
+    stats = appearance.stats || %{}
 
-    cond do
-      String.contains?(name_lower, [
-        "ederson",
-        "alisson",
-        "cech",
-        "schmeichel",
-        "seaman",
-        "lehmann",
-        "van der sar",
-        "de gea",
-        "courtois",
-        "lloris",
-        "reina",
-        "hart",
-        "james",
-        "barthez",
-        "dudek",
-        "howard",
-        "friedel",
-        "robinson",
-        "martyn",
-        "gk",
-        "goalkeeper"
-      ]) ->
+    case pos do
+      "GK" ->
         :gk
 
-      String.contains?(name_lower, [
-        "ashley cole",
-        "robertson",
-        "irwin",
-        "evra",
-        "riise",
-        "baines",
-        "luke shaw",
-        "clichy",
-        "bridge",
-        "le saux",
-        "chilwell",
-        "marcos alonso",
-        "babayaro",
-        "zinchenko",
-        "estupinan",
-        "gvardiol",
-        "aké",
-        "ake",
-        "left-back",
-        "left back",
-        "lb"
-      ]) ->
-        :lb
+      "DF" ->
+        pac = Map.get(stats, "pac", 50)
+        def_stat = Map.get(stats, "def", 50)
+        phy = Map.get(stats, "phy", 50)
 
-      String.contains?(name_lower, [
-        "gary neville",
-        "walker",
-        "alexander-arnold",
-        "ivanovic",
-        "sagna",
-        "lauren",
-        "zabaleta",
-        "azpilicueta",
-        "coleman",
-        "trippier",
-        "reece james",
-        "wan-bissaka",
-        "glen johnson",
-        "ferreira",
-        "finnan",
-        "petrescu",
-        "steve carr",
-        "lee dixon",
-        "white",
-        "porro",
-        "right-back",
-        "right back",
-        "rb"
-      ]) ->
-        :rb
+        # Fullbacks tend to have high pace relative to their defending/physicality.
+        # Centre-backs are slower but stronger defensively.
+        if pac > (def_stat + phy) / 2 do
+          # Fullback — assign roughly evenly to :lb and :rb
+          if rem(appearance.id, 2) == 0, do: :lb, else: :rb
+        else
+          :cb
+        end
 
-      String.contains?(name_lower, [
-        "van dijk",
-        "terry",
-        "ferdinand",
-        "vidic",
-        "sol campbell",
-        "tony adams",
-        "jaap stam",
-        "kompany",
-        "carvalho",
-        "hyypia",
-        "carragher",
-        "ledley king",
-        "pallister",
-        "steve bruce",
-        "keown",
-        "bould",
-        "saliba",
-        "gabriel",
-        "ruben dias",
-        "dias",
-        "stones",
-        "laporte",
-        "toure",
-        "skrtel",
-        "agger",
-        "morgan",
-        "huth",
-        "alderweireld",
-        "vertonghen",
-        "desailly",
-        "leboeuf",
-        "david luiz",
-        "cahill",
-        "thiago silva",
-        "rudiger",
-        "konate",
-        "romero",
-        "botman",
-        "martinez",
-        "varane",
-        "maguire",
-        "lindelof",
-        "mertesacker",
-        "koscielny",
-        "centre-back",
-        "centre back",
-        "cb",
-        "defender"
-      ]) ->
-        :cb
+      "MF" ->
+        # Central midfielders by default — the slot preference system already
+        # maps :lm to [:lw, :cm] and :rm to [:rw, :cm], so CMs fill wide slots too
+        :cm
 
-      String.contains?(name_lower, [
-        "giggs",
-        "pires",
-        "duff",
-        "kewell",
-        "overmars",
-        "gareth bale",
-        "bale",
-        "eden hazard",
-        "hazard",
-        "son heung-min",
-        "son",
-        "rashford",
-        "sterling",
-        "grealish",
-        "martinelli",
-        "luis diaz",
-        "sadio mane",
-        "mane",
-        "sancho",
-        "zaha",
-        "foden",
-        "barnes",
-        "mitoma",
-        "mudryk",
-        "winger",
-        "left winger",
-        "lw"
-      ]) ->
-        :lw
+      "FW" ->
+        sho = Map.get(stats, "sho", 50)
+        pac = Map.get(stats, "pac", 50)
+        dri = Map.get(stats, "dri", 50)
 
-      String.contains?(name_lower, [
-        "beckham",
-        "cristiano ronaldo",
-        "ronaldo",
-        "ljungberg",
-        "anderton",
-        "solano",
-        "mcmanaman",
-        "wright-phillips",
-        "lennon",
-        "mahrez",
-        "saka",
-        "kulusevski",
-        "bernardo silva",
-        "salah",
-        "raphinha",
-        "antony",
-        "bowen",
-        "almiron",
-        "dembele",
-        "right winger",
-        "rw"
-      ]) ->
-        :rw
+        # Strikers have elite shooting; wingers rely more on pace and dribbling
+        if sho >= pac and sho >= dri do
+          :st
+        else
+          # Winger — assign roughly evenly to :lw and :rw
+          if rem(appearance.id, 2) == 0, do: :lw, else: :rw
+        end
 
-      String.contains?(name_lower, [
-        "henry",
-        "shearer",
-        "wayne rooney",
-        "rooney",
-        "nistelrooy",
-        "drogba",
-        "sergio aguero",
-        "aguero",
-        "kane",
-        "van persie",
-        "suarez",
-        "fowler",
-        "andy cole",
-        "dwight yorke",
-        "sheringham",
-        "zola",
-        "bergkamp",
-        "cantona",
-        "owen",
-        "robbie keane",
-        "keane",
-        "defoe",
-        "hasselbaink",
-        "anelka",
-        "torres",
-        "berbatov",
-        "tevez",
-        "giroud",
-        "firmino",
-        "haaland",
-        "gabriel jesus",
-        "jesus",
-        "isak",
-        "watkins",
-        "nunez",
-        "mitrovic",
-        "toney",
-        "aubameyang",
-        "lukaku",
-        "vardy",
-        "costa",
-        "benteke",
-        "adebayor",
-        "striker",
-        "forward",
-        "st",
-        "cf"
-      ]) ->
-        :st
-
-      true ->
+      _ ->
         :cm
     end
   end
