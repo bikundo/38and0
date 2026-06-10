@@ -607,7 +607,9 @@ defmodule InvinciblesWeb.GameLive do
                       Manager Leaderboard
                     </h1>
                     <p class="text-xs text-[rgba(0,0,0,0.58)] mt-0.5 font-medium">
-                      The best campaigns from managers worldwide · {number_to_delimited(@total_games_played)} total games played
+                      The best campaigns from managers worldwide · {number_to_delimited(
+                        @total_games_played
+                      )} total games played
                     </p>
                   </div>
                 </div>

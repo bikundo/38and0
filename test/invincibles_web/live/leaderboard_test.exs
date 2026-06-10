@@ -32,7 +32,8 @@ defmodule InvinciblesWeb.LeaderboardTest do
     {:ok, appearance: appearance}
   end
 
-  test "Leaderboard displays empty state when no shares exist and displays 0 total games played", %{conn: conn} do
+  test "Leaderboard displays empty state when no shares exist and displays 0 total games played",
+       %{conn: conn} do
     {:ok, _view, html} = live(conn, ~p"/?tab=leaderboard")
     assert html =~ "No campaigns active"
     assert html =~ "Manager Leaderboard"
