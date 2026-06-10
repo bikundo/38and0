@@ -46,7 +46,7 @@ defmodule Invincibles.GameShareTest do
     assert retrieved.lineup[:st].id == app.id
   end
 
-  test "get_share/1 deletes and rejects expired share" do
+  test "get_share/1 retrieves backdated shares without expiring them" do
     # Insert share with manually backdated inserted_at
     # > 48 hours
     backdated = NaiveDateTime.utc_now() |> NaiveDateTime.add(-172_900, :second)
@@ -58,7 +58,7 @@ defmodule Invincibles.GameShareTest do
         lineup: %{"gk" => nil},
         season_record: %{"wins" => 0, "draws" => 0, "losses" => 0, "gf" => 0, "ga" => 0},
         season_label: "2023-24",
-        funny_quote: "Expired"
+        funny_quote: "Not Expired"
       })
       |> Repo.insert()
 
@@ -68,8 +68,23 @@ defmodule Invincibles.GameShareTest do
         set: [inserted_at: backdated]
       )
 
-    assert Game.get_share(share.id) == :error
-    # Check that it got deleted
-    assert Repo.get(Invincibles.Game.Share, share.id) == nil
+    assert {:ok, retrieved} = Game.get_share(share.id)
+    assert retrieved.funny_quote == "Not Expired"
+    assert Repo.get(Invincibles.Game.Share, share.id) != nil
+  end
+
+  test "count_all_shares/0 returns correct number of shares" do
+    initial_count = Game.count_all_shares()
+
+    {:ok, _share} =
+      Game.create_share(
+        %{gk: nil},
+        "4-3-3",
+        %{wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, week: 38},
+        "Season A",
+        "Quote"
+      )
+
+    assert Game.count_all_shares() == initial_count + 1
   end
 end

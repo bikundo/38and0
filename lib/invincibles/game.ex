@@ -280,9 +280,7 @@ defmodule Invincibles.Game do
   end
 
   @doc """
-  Fetches a share record. Automatically checks if the record has expired (48 hours).
-  If expired, deletes it and returns :error.
-  Otherwise reconstructs the lineup with preloaded appearances.
+  Fetches a share record and reconstructs the lineup with preloaded appearances.
   """
   def get_share(id) do
     case Repo.get(Share, id) do
@@ -290,43 +288,35 @@ defmodule Invincibles.Game do
         :error
 
       share ->
-        inserted_at = DateTime.from_naive!(share.inserted_at, "Etc/UTC")
-        diff_seconds = DateTime.diff(DateTime.utc_now(), inserted_at)
+        app_ids =
+          share.lineup
+          |> Map.values()
+          |> Enum.reject(&is_nil/1)
 
-        if diff_seconds >= 172_800 do
-          Repo.delete(share)
-          :error
-        else
-          app_ids =
-            share.lineup
-            |> Map.values()
-            |> Enum.reject(&is_nil/1)
+        appearances =
+          from(a in Appearance,
+            where: a.id in ^app_ids,
+            preload: [:player, :club]
+          )
+          |> Repo.all()
+          |> Map.new(fn app -> {app.id, app} end)
 
-          appearances =
-            from(a in Appearance,
-              where: a.id in ^app_ids,
-              preload: [:player, :club]
-            )
-            |> Repo.all()
-            |> Map.new(fn app -> {app.id, app} end)
+        reconstructed_lineup =
+          Enum.reduce(share.lineup, %{}, fn {slot_str, app_id}, acc ->
+            slot_atom = String.to_existing_atom(slot_str)
+            app_struct = if app_id, do: Map.get(appearances, app_id), else: nil
+            Map.put(acc, slot_atom, app_struct)
+          end)
 
-          reconstructed_lineup =
-            Enum.reduce(share.lineup, %{}, fn {slot_str, app_id}, acc ->
-              slot_atom = String.to_existing_atom(slot_str)
-              app_struct = if app_id, do: Map.get(appearances, app_id), else: nil
-              Map.put(acc, slot_atom, app_struct)
-            end)
+        season_record_atoms =
+          Map.new(share.season_record, fn {k, v} -> {String.to_existing_atom(k), v} end)
 
-          season_record_atoms =
-            Map.new(share.season_record, fn {k, v} -> {String.to_existing_atom(k), v} end)
-
-          {:ok, %{share | lineup: reconstructed_lineup, season_record: season_record_atoms}}
-        end
+        {:ok, %{share | lineup: reconstructed_lineup, season_record: season_record_atoms}}
     end
   end
 
   @doc """
-  Lists all active shares created within the last 48 hours, sorted by:
+  Lists the best shares of all time, sorted by:
   1. Points (wins * 3 + draws) desc
   2. Losses asc
   3. Goal Difference desc
@@ -334,10 +324,7 @@ defmodule Invincibles.Game do
   5. Recency desc
   """
   def list_active_shares do
-    two_days_ago_naive = NaiveDateTime.utc_now() |> NaiveDateTime.add(-172_800, :second)
-
     from(s in Share,
-      where: s.inserted_at > ^two_days_ago_naive,
       order_by: [
         desc:
           fragment(
@@ -358,6 +345,13 @@ defmodule Invincibles.Game do
       limit: 20
     )
     |> Repo.all()
+  end
+
+  @doc """
+  Counts the total number of shared game records in the database.
+  """
+  def count_all_shares do
+    Repo.aggregate(Share, :count, :id)
   end
 
   @doc """
