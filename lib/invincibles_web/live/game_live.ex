@@ -78,7 +78,11 @@ defmodule InvinciblesWeb.GameLive do
     socket =
       if tab == :leaderboard do
         shares = Game.list_active_shares()
-        assign(socket, shares: shares)
+        total_games = Game.count_all_shares()
+
+        socket
+        |> assign(shares: shares)
+        |> assign(total_games_played: total_games)
       else
         socket
       end
@@ -169,6 +173,7 @@ defmodule InvinciblesWeb.GameLive do
     |> assign(:active_tab, :draft)
     |> assign(:shares, [])
     |> assign(:active_share, nil)
+    |> assign(:total_games_played, 0)
   end
 
   @doc """
@@ -574,6 +579,15 @@ defmodule InvinciblesWeb.GameLive do
     end
   end
 
+  defp number_to_delimited(num) when is_integer(num) do
+    num
+    |> Integer.to_charlist()
+    |> Enum.reverse()
+    |> Enum.chunk_every(3)
+    |> Enum.join(",")
+    |> String.reverse()
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -592,8 +606,8 @@ defmodule InvinciblesWeb.GameLive do
                     <h1 class="text-2xl font-black tracking-tight text-[#006241]">
                       Manager Leaderboard
                     </h1>
-                    <p class="text-xs text-[rgba(0,0,0,0.58)] mt-0.5">
-                      The best campaigns from managers worldwide over the last 48 hours.
+                    <p class="text-xs text-[rgba(0,0,0,0.58)] mt-0.5 font-medium">
+                      The best campaigns from managers worldwide · {number_to_delimited(@total_games_played)} total games played
                     </p>
                   </div>
                 </div>
