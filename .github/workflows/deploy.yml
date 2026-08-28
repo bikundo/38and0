@@ -13,24 +13,10 @@ jobs:
 
       - name: Validate Secrets Presence
         run: |
-          if [ -z "${{ secrets.VPS_HOST }}" ]; then 
-            echo "VPS_HOST is missing/empty!"
-          else
-            HOST="${{ secrets.VPS_HOST }}"
-            echo "VPS_HOST is set. Length: ${#HOST} characters"
-            if [[ "$HOST" =~ [[:space:]] ]]; then echo "WARNING: Host contains spaces!"; fi
-            if [[ "$HOST" =~ ^https?:// ]]; then echo "WARNING: Host contains http/https protocol prefix!"; fi
-            if [[ "$HOST" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-              echo "VPS_HOST is a standard IPv4 address."
-            else
-              echo "VPS_HOST is not a standard IPv4 (could be a domain or contains extra characters)."
-            fi
-            # Safe preview of first/last char
-            if [ ${#HOST} -gt 2 ]; then
-              echo "Safe Preview: Starts with '${HOST:0:1}' and ends with '${HOST: -1}'"
-            fi
+          if [ -z "${{ secrets.VPS_HOST }}" ] || [ -z "${{ secrets.VPS_SSH_KEY }}" ]; then 
+            echo "Error: Required deployment secrets (VPS_HOST or VPS_SSH_KEY) are not set."
+            exit 1
           fi
-          if [ -z "${{ secrets.VPS_SSH_KEY }}" ]; then echo "VPS_SSH_KEY is missing/empty!"; else echo "VPS_SSH_KEY is set."; fi
 
       - name: Set up Elixir & Erlang
         uses: erlef/setup-beam@v1
