@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "code-cleanup",
+  "owner": "franchiseai",
+  "repo": "claude-code-plugins",
+  "path": "plugins/code-cleanup/skills/code-cleanup",
+  "branch": "master",
+  "sha": "c900072c170dc49010bef1e7112e93995790af73",
+  "source": "manual"
+}
