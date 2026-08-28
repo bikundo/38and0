@@ -12,7 +12,7 @@ Make the draft layout fully mobile-friendly and transition the pitch view from s
 
 ### Lineup Pitch Component
 
-#### [MODIFY] [game_live.ex](file:///Users/bix/Documents/code/Js/38and0/lib/invincibles_web/live/game_live.ex)
+#### [MODIFY] [game_live.ex](file:///lib/invincibles_web/live/game_live.ex)
 
 1. Introduce `@position_descriptions` to map position atoms to human-readable sub-labels (e.g. `st` -> `"Striker"`).
 2. Change the layout `<main>` container and internal structures to use Tailwind order utilities (`order-1` on draft controls, `order-2` on pitch area for mobile).

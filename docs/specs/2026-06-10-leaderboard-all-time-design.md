@@ -14,25 +14,25 @@ Modify the leaderboard to display the best campaigns of all time (rather than ju
 
 ### Database & Application Supervisor
 
-#### [MODIFY] [application.ex](file:///Users/bix/Documents/code/Js/38and0/lib/invincibles/application.ex)
+#### [MODIFY] [application.ex](file:///lib/invincibles/application.ex)
 * Remove `Invincibles.Game.ShareCleanupWorker` from the children supervision list.
 
-#### [DELETE] [share_cleanup_worker.ex](file:///Users/bix/Documents/code/Js/38and0/lib/invincibles/game/share_cleanup_worker.ex)
+#### [DELETE] [share_cleanup_worker.ex](file:///lib/invincibles/game/share_cleanup_worker.ex)
 * Delete the cleanup worker module entirely as it is no longer required.
 
-#### [DELETE] [share_cleanup_worker_test.exs](file:///Users/bix/Documents/code/Js/38and0/test/invincibles/share_cleanup_worker_test.exs)
+#### [DELETE] [share_cleanup_worker_test.exs](file:///test/invincibles/share_cleanup_worker_test.exs)
 * Delete the cleanup worker unit tests.
 
 ### Game Context
 
-#### [MODIFY] [game.ex](file:///Users/bix/Documents/code/Js/38and0/lib/invincibles/game.ex)
+#### [MODIFY] [game.ex](file:///lib/invincibles/game.ex)
 * Update `get_share/1`: Remove the age-checking expiration check (deleting and returning `:error` if older than 48 hours). Allow any existing share to be loaded.
 * Update `list_active_shares/0` (keeping the name for compatibility): Remove the 48-hour `inserted_at` filter clause so that it returns the top 20 best campaigns of all time.
 * Add `count_all_shares/0`: A helper function that returns the total count of shares in the database.
 
 ### Game LiveView
 
-#### [MODIFY] [game_live.ex](file:///Users/bix/Documents/code/Js/38and0/lib/invincibles_web/live/game_live.ex)
+#### [MODIFY] [game_live.ex](file:///lib/invincibles_web/live/game_live.ex)
 * In `mount/3`, initialize `@total_games_played` to `0` inside `reset_state/1` or `mount/3`.
 * In `handle_params/3`, when `tab == :leaderboard`, assign `shares: Game.list_active_shares()` and `total_games_played: Game.count_all_shares()`.
 * Add a `number_to_delimited/1` helper to format the count with thousands separators (commas).

@@ -20,7 +20,7 @@ We will disable the automatic share cleanup by removing `ShareCleanupWorker` fro
 - Delete: `test/invincibles/share_cleanup_worker_test.exs`
 
 - [ ] **Step 1: Modify application.ex to remove ShareCleanupWorker**
-  Open [application.ex](file:///Users/bix/Documents/code/Js/38and0/lib/invincibles/application.ex) and remove the `Invincibles.Game.ShareCleanupWorker` atom from the `children` list.
+  Open [application.ex](file:///lib/invincibles/application.ex) and remove the `Invincibles.Game.ShareCleanupWorker` atom from the `children` list.
   
   Replace lines 15-16:
   ```elixir
@@ -33,10 +33,10 @@ We will disable the automatic share cleanup by removing `ShareCleanupWorker` fro
   ```
 
 - [ ] **Step 2: Delete share_cleanup_worker.ex**
-  Remove the file [share_cleanup_worker.ex](file:///Users/bix/Documents/code/Js/38and0/lib/invincibles/game/share_cleanup_worker.ex).
+  Remove the file [share_cleanup_worker.ex](file:///lib/invincibles/game/share_cleanup_worker.ex).
 
 - [ ] **Step 3: Delete share_cleanup_worker_test.exs**
-  Remove the file [share_cleanup_worker_test.exs](file:///Users/bix/Documents/code/Js/38and0/test/invincibles/share_cleanup_worker_test.exs).
+  Remove the file [share_cleanup_worker_test.exs](file:///test/invincibles/share_cleanup_worker_test.exs).
 
 - [ ] **Step 4: Commit changes**
   ```bash
@@ -56,7 +56,7 @@ We will update the `Game` context functions to query all shares without age rest
 - Modify: `test/invincibles/game_share_test.exs`
 
 - [ ] **Step 5: Update list_active_shares/0 and get_share/1, and add count_all_shares/0**
-  Open [game.ex](file:///Users/bix/Documents/code/Js/38and0/lib/invincibles/game.ex).
+  Open [game.ex](file:///lib/invincibles/game.ex).
   
   1. Update `list_active_shares/0` to remove the query filter `where: s.inserted_at > ^two_days_ago_naive`.
   2. Update `get_share/1` to remove the age diff checking and deletion logic.
@@ -208,7 +208,7 @@ We will update the `Game` context functions to query all shares without age rest
   ```
 
 - [ ] **Step 6: Update game_share_test.exs to test count and non-expiration**
-  Open [game_share_test.exs](file:///Users/bix/Documents/code/Js/38and0/test/invincibles/game_share_test.exs).
+  Open [game_share_test.exs](file:///test/invincibles/game_share_test.exs).
   Update `test "get_share/1 deletes and rejects expired share"` to check that old shares are *not* deleted or expired, and add a test for `count_all_shares/0`.
   
   Target block (lines 49-74):
@@ -306,7 +306,7 @@ We will assign the total games count to the LiveView socket and render it inline
 - Modify: `test/invincibles_web/live/leaderboard_test.exs`
 
 - [ ] **Step 9: Assign total_games_played and define number formatter**
-  Open [game_live.ex](file:///Users/bix/Documents/code/Js/38and0/lib/invincibles_web/live/game_live.ex).
+  Open [game_live.ex](file:///lib/invincibles_web/live/game_live.ex).
   
   1. Add `|> assign(:total_games_played, 0)` in `reset_state/1`.
   
@@ -393,7 +393,7 @@ We will assign the total games count to the LiveView socket and render it inline
   ```
 
 - [ ] **Step 10: Update leaderboard tests to check count display**
-  Open [leaderboard_test.exs](file:///Users/bix/Documents/code/Js/38and0/test/invincibles_web/live/leaderboard_test.exs) and add assertions that check the inline text matches "total games played".
+  Open [leaderboard_test.exs](file:///test/invincibles_web/live/leaderboard_test.exs) and add assertions that check the inline text matches "total games played".
   
   Target block (lines 35-39):
   ```elixir

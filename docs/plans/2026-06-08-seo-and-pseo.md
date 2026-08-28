@@ -23,7 +23,7 @@ We will add dynamic tags to the root layout and update robots.txt to guide searc
 - Modify: `priv/static/robots.txt`
 
 - [ ] **Step 1: Update root.html.heex head tags**
-  Open [root.html.heex](file:///Users/bix/Documents/code/Js/38and0/lib/invincibles_web/components/layouts/root.html.heex) and add dynamic meta descriptions, Open Graph, and Twitter Card tags.
+  Open [root.html.heex](file:///lib/invincibles_web/components/layouts/root.html.heex) and add dynamic meta descriptions, Open Graph, and Twitter Card tags.
   Ensure live_title suffix is updated to ` · Premier League Retro Draft`.
   
   Code to add inside `<head>`:
@@ -39,7 +39,7 @@ We will add dynamic tags to the root layout and update robots.txt to guide searc
   ```
 
 - [ ] **Step 2: Update robots.txt**
-  Open [robots.txt](file:///Users/bix/Documents/code/Js/38and0/priv/static/robots.txt) and replace its content with the following:
+  Open [robots.txt](file:///priv/static/robots.txt) and replace its content with the following:
   ```text
   User-agent: *
   Allow: /
@@ -116,7 +116,7 @@ Add support queries to retrieve seasons list and clean squad appearances.
 - Modify: `lib/invincibles/game.ex`
 
 - [ ] **Step 5: Add directory helper functions to Game context**
-  Add these functions to [game.ex](file:///Users/bix/Documents/code/Js/38and0/lib/invincibles/game.ex):
+  Add these functions to [game.ex](file:///lib/invincibles/game.ex):
   ```elixir
   def list_seasons_for_club(club_id) do
     from(a in Invincibles.Game.Appearance,
