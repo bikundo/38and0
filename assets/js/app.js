@@ -79,6 +79,43 @@ const truncateToTwitterLength = (str, maxLen) => {
   return result;
 };
 
+const buildShareText = (el, url, { truncate = false } = {}) => {
+  const wins = el.dataset.wins || "0";
+  const draws = el.dataset.draws || "0";
+  const losses = el.dataset.losses || "0";
+  const points = el.dataset.points || "0";
+  const season = el.dataset.season ? ` (${el.dataset.season})` : "";
+  const quote = el.dataset.quote || "";
+
+  const recordLine = `Record: ${wins}W - ${draws}D - ${losses}L | ${points} Pts${season} ⚽🏆`;
+  const ctaLine = `Draft yours: ${url}`;
+  const footer = `#InvinciblesDraft`;
+
+  if (!quote) {
+    return `${recordLine}\n${ctaLine}\n\n${footer}`;
+  }
+
+  const baseHeader = `\n\n${recordLine}\n${ctaLine}\n\n${footer}`;
+
+  if (truncate) {
+    const baseTwitterLength = getTwitterLength(baseHeader, url);
+    const maxQuoteTwitterLength = 280 - baseTwitterLength - 2;
+
+    if (maxQuoteTwitterLength > 3) {
+      const quoteTwitterLength = getTwitterLength(quote);
+      if (quoteTwitterLength > maxQuoteTwitterLength) {
+        const targetLength = maxQuoteTwitterLength - 3;
+        const truncated = truncateToTwitterLength(quote, targetLength);
+        return `"${truncated}..."${baseHeader}`;
+      }
+      return `"${quote}"${baseHeader}`;
+    }
+    return `${recordLine}\n${ctaLine}\n\n${footer}`;
+  }
+
+  return `"${quote}"${baseHeader}`;
+};
+
 const Hooks = {
   SpinWheel: {
     mounted() {
@@ -292,55 +329,21 @@ const Hooks = {
 
   ShareButton: {
     mounted() {
+      const openTwitter = (url) => {
+        const text = buildShareText(this.el, url, { truncate: true });
+        const tweetText = encodeURIComponent(text);
+        window.open(`https://twitter.com/intent/tweet?text=${tweetText}`, "_blank");
+      };
+
       this.el.addEventListener("click", () => {
         const directUrl = this.el.dataset.shareUrl;
         if (directUrl) {
-          // Instant client-side share
-          const wins = this.el.dataset.wins || "0";
-          const draws = this.el.dataset.draws || "0";
-          const losses = this.el.dataset.losses || "0";
-          const points = this.el.dataset.points || "0";
-          const season = this.el.dataset.season ? ` (${this.el.dataset.season})` : "";
-          const quote = this.el.dataset.quote || "";
-
-          const recordLine = `Record: ${wins}W - ${draws}D - ${losses}L | ${points} Pts${season} ⚽🏆`;
-          const ctaLine = `Draft yours: ${directUrl}`;
-          const footer = `#InvinciblesDraft`;
-
-          let text = "";
-          if (quote) {
-            const baseHeader = `\n\n${recordLine}\n${ctaLine}\n\n${footer}`;
-            const baseTwitterLength = getTwitterLength(baseHeader, directUrl);
-            const maxQuoteTwitterLength = 280 - baseTwitterLength - 2; // 2 for quotes
-
-            if (maxQuoteTwitterLength > 3) {
-              const quoteTwitterLength = getTwitterLength(quote);
-              if (quoteTwitterLength > maxQuoteTwitterLength) {
-                const targetLength = maxQuoteTwitterLength - 3;
-                const truncated = truncateToTwitterLength(quote, targetLength);
-                text = `"${truncated}..."${baseHeader}`;
-              } else {
-                text = `"${quote}"${baseHeader}`;
-              }
-            } else {
-              text = `${recordLine}\n${ctaLine}\n\n${footer}`;
-            }
-          } else {
-            text = `${recordLine}\n${ctaLine}\n\n${footer}`;
-          }
-
-          const tweetText = encodeURIComponent(text);
-          const twitterUrl = `https://twitter.com/intent/tweet?text=${tweetText}`;
-          window.open(twitterUrl, "_blank");
+          openTwitter(directUrl);
         } else {
-          // Fallback to server roundtrip if url is not yet available
-          const originalText = this.el.innerHTML;
           this.el.disabled = true;
+          this._originalText = this.el.innerHTML;
           this.el.innerHTML = "Generating Link...";
-
           this.pushEvent("share_lineup", {});
-
-          this._originalText = originalText;
         }
       });
 
@@ -349,43 +352,7 @@ const Hooks = {
         if (this._originalText) {
           this.el.innerHTML = this._originalText;
         }
-
-        const wins = this.el.dataset.wins || "0";
-        const draws = this.el.dataset.draws || "0";
-        const losses = this.el.dataset.losses || "0";
-        const points = this.el.dataset.points || "0";
-        const season = this.el.dataset.season ? ` (${this.el.dataset.season})` : "";
-        const quote = this.el.dataset.quote || "";
-
-        const recordLine = `Record: ${wins}W - ${draws}D - ${losses}L | ${points} Pts${season} ⚽🏆`;
-        const ctaLine = `Draft yours: ${url}`;
-        const footer = `#InvinciblesDraft`;
-
-        let text = "";
-        if (quote) {
-          const baseHeader = `\n\n${recordLine}\n${ctaLine}\n\n${footer}`;
-          const baseTwitterLength = getTwitterLength(baseHeader, url);
-          const maxQuoteTwitterLength = 280 - baseTwitterLength - 2; // 2 for quotes
-
-          if (maxQuoteTwitterLength > 3) {
-            const quoteTwitterLength = getTwitterLength(quote);
-            if (quoteTwitterLength > maxQuoteTwitterLength) {
-              const targetLength = maxQuoteTwitterLength - 3;
-              const truncated = truncateToTwitterLength(quote, targetLength);
-              text = `"${truncated}..."${baseHeader}`;
-            } else {
-              text = `"${quote}"${baseHeader}`;
-            }
-          } else {
-            text = `${recordLine}\n${ctaLine}\n\n${footer}`;
-          }
-        } else {
-          text = `${recordLine}\n${ctaLine}\n\n${footer}`;
-        }
-
-        const tweetText = encodeURIComponent(text);
-        const twitterUrl = `https://twitter.com/intent/tweet?text=${tweetText}`;
-        window.open(twitterUrl, "_blank");
+        openTwitter(url);
       });
     }
   },
@@ -396,24 +363,7 @@ const Hooks = {
         const directUrl = this.el.dataset.shareUrl;
         if (!directUrl) return;
 
-        const wins = this.el.dataset.wins || "0";
-        const draws = this.el.dataset.draws || "0";
-        const losses = this.el.dataset.losses || "0";
-        const points = this.el.dataset.points || "0";
-        const season = this.el.dataset.season ? ` (${this.el.dataset.season})` : "";
-        const quote = this.el.dataset.quote || "";
-
-        const recordLine = `Record: ${wins}W - ${draws}D - ${losses}L | ${points} Pts${season} ⚽🏆`;
-        const ctaLine = `Draft yours: ${directUrl}`;
-        const footer = `#InvinciblesDraft`;
-
-        let text = "";
-        if (quote) {
-          text = `"${quote}"\n\n${recordLine}\n${ctaLine}\n\n${footer}`;
-        } else {
-          text = `${recordLine}\n${ctaLine}\n\n${footer}`;
-        }
-
+        const text = buildShareText(this.el, directUrl, { truncate: false });
         const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
         window.open(whatsappUrl, "_blank");
       });

@@ -83,4 +83,21 @@ defmodule Invincibles.GameShareTest do
 
     assert Game.count_all_shares() == initial_count + 1
   end
+
+  test "list_active_shares/0 returns atom-keyed season_record" do
+    {:ok, _share} =
+      Game.create_share(
+        %{gk: nil},
+        "4-3-3",
+        %{wins: 38, draws: 0, losses: 0, gf: 100, ga: 10, week: 38},
+        "Season Record Test",
+        "Quote"
+      )
+
+    shares = Game.list_active_shares()
+    assert length(shares) >= 1
+    sample = hd(shares)
+    assert sample.season_record.wins == 38
+    assert is_integer(sample.season_record.wins)
+  end
 end

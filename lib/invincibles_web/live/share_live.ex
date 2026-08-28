@@ -7,11 +7,9 @@ defmodule InvinciblesWeb.ShareLive do
   def mount(%{"id" => id}, _session, socket) do
     case Game.get_share(id) do
       {:ok, share} ->
-        wins = Map.get(share.season_record, "wins") || Map.get(share.season_record, :wins) || 0
-        draws = Map.get(share.season_record, "draws") || Map.get(share.season_record, :draws) || 0
-
-        losses =
-          Map.get(share.season_record, "losses") || Map.get(share.season_record, :losses) || 0
+        wins = share.season_record.wins
+        draws = share.season_record.draws
+        losses = share.season_record.losses
 
         pts = wins * 3 + draws
         record_str = "#{wins}W - #{draws}D - #{losses}L"
@@ -63,116 +61,12 @@ defmodule InvinciblesWeb.ShareLive do
         <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start w-full">
           <div class="order-2 lg:order-1 lg:col-span-8 flex flex-col gap-6">
             <div class="bg-[#f2f0eb] flex flex-col gap-4">
-              <div class="relative bg-[#006241] border-4 border-[#1E3932] rounded-3xl p-6 overflow-hidden min-h-[660px] flex flex-col justify-between shadow-lg select-none">
-                <div class="absolute inset-4 border border-white/20 rounded-2xl pointer-events-none">
-                </div>
-                <div class="absolute inset-x-4 top-1/2 h-px bg-white/20 -translate-y-1/2 pointer-events-none">
-                </div>
-                <div class="absolute top-1/2 left-1/2 w-36 h-36 border border-white/20 rounded-full -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-                </div>
-                <div class="absolute top-4 left-1/2 -translate-x-1/2 w-80 h-32 border-b border-x border-white/10 pointer-events-none">
-                </div>
-                <div class="absolute bottom-4 left-1/2 -translate-x-1/2 w-80 h-32 border-t border-x border-white/10 pointer-events-none">
-                </div>
-
-                <% layout = Map.fetch!(@formation_layouts, @formation) %>
-                <% slot_labels = InvinciblesWeb.GameLive.slot_labels(layout) %>
-
-                <div class="flex justify-around items-center gap-2 z-10 mt-2">
-                  <%= for pos <- layout.fwd do %>
-                    <div class="pitch-slot flex flex-col items-center justify-center transition-all duration-200">
-                      <%= if card = @lineup[pos] do %>
-                        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#f43f5e] border-2 border-white/20 flex items-center justify-center text-white font-extrabold text-sm sm:text-base shadow-lg">
-                          {elem(slot_labels[pos], 0)}
-                        </div>
-                        <div class="mt-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-white text-[10px] sm:text-xs font-semibold shadow text-center whitespace-nowrap">
-                          {truncate_name(card.player.display_name)}
-                        </div>
-                      <% else %>
-                        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/80 font-extrabold text-sm sm:text-base">
-                          {elem(slot_labels[pos], 0)}
-                        </div>
-                      <% end %>
-                    </div>
-                  <% end %>
-                </div>
-
-                <%= if layout.amf != [] do %>
-                  <div class="flex justify-around items-center gap-2 z-10 my-3">
-                    <%= for pos <- layout.amf do %>
-                      <div class="pitch-slot flex flex-col items-center justify-center transition-all duration-200">
-                        <%= if card = @lineup[pos] do %>
-                          <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#f43f5e] border-2 border-white/20 flex items-center justify-center text-white font-extrabold text-sm sm:text-base shadow-lg">
-                            {elem(slot_labels[pos], 0)}
-                          </div>
-                          <div class="mt-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-white text-[10px] sm:text-xs font-semibold shadow text-center whitespace-nowrap">
-                            {truncate_name(card.player.display_name)}
-                          </div>
-                        <% else %>
-                          <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/80 font-extrabold text-sm sm:text-base">
-                            {elem(slot_labels[pos], 0)}
-                          </div>
-                        <% end %>
-                      </div>
-                    <% end %>
-                  </div>
-                <% end %>
-
-                <div class="flex justify-around items-center gap-2 z-10 my-4">
-                  <%= for pos <- layout.mid do %>
-                    <div class="pitch-slot flex flex-col items-center justify-center transition-all duration-200">
-                      <%= if card = @lineup[pos] do %>
-                        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#f43f5e] border-2 border-white/20 flex items-center justify-center text-white font-extrabold text-sm sm:text-base shadow-lg">
-                          {elem(slot_labels[pos], 0)}
-                        </div>
-                        <div class="mt-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-white text-[10px] sm:text-xs font-semibold shadow text-center whitespace-nowrap">
-                          {truncate_name(card.player.display_name)}
-                        </div>
-                      <% else %>
-                        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/80 font-extrabold text-sm sm:text-base">
-                          {elem(slot_labels[pos], 0)}
-                        </div>
-                      <% end %>
-                    </div>
-                  <% end %>
-                </div>
-
-                <div class="flex justify-around items-center gap-2 z-10">
-                  <%= for pos <- layout.def do %>
-                    <div class="pitch-slot flex flex-col items-center justify-center transition-all duration-200">
-                      <%= if card = @lineup[pos] do %>
-                        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#f43f5e] border-2 border-white/20 flex items-center justify-center text-white font-extrabold text-sm sm:text-base shadow-lg">
-                          {elem(slot_labels[pos], 0)}
-                        </div>
-                        <div class="mt-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-white text-[10px] sm:text-xs font-semibold shadow text-center whitespace-nowrap">
-                          {truncate_name(card.player.display_name)}
-                        </div>
-                      <% else %>
-                        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/80 font-extrabold text-sm sm:text-base">
-                          {elem(slot_labels[pos], 0)}
-                        </div>
-                      <% end %>
-                    </div>
-                  <% end %>
-                </div>
-
-                <div class="flex justify-center items-center z-10 mb-2">
-                  <div class="pitch-slot flex flex-col items-center justify-center transition-all duration-200">
-                    <%= if card = @lineup[:gk] do %>
-                      <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#f43f5e] border-2 border-white/20 flex items-center justify-center text-white font-extrabold text-sm sm:text-base shadow-lg">
-                        GK
-                      </div>
-                      <div class="mt-2 px-3 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-white text-[10px] sm:text-xs font-semibold max-w-[80px] sm:max-w-[100px] truncate shadow">
-                        {truncate_name(card.player.display_name)}
-                      </div>
-                    <% else %>
-                      <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/80 font-extrabold text-sm sm:text-base">
-                        GK
-                      </div>
-                    <% end %>
-                  </div>
-                </div>
-              </div>
+              <.pitch_board
+                lineup={@lineup}
+                formation={@formation}
+                formation_layouts={@formation_layouts}
+                interactive={false}
+              />
 
               <% pts = @season_record.wins * 3 + @season_record.draws
               gd = @season_record.gf - @season_record.ga
@@ -304,12 +198,5 @@ defmodule InvinciblesWeb.ShareLive do
       </div>
     </Layouts.app>
     """
-  end
-
-  defp truncate_name(name) do
-    case String.split(name, " ") do
-      [single] -> single
-      parts -> List.last(parts)
-    end
   end
 end

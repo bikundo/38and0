@@ -122,30 +122,31 @@ defmodule Invincibles.Game.SimEngine do
   end
 
   @doc """
-  Simulates a single match between the User and the Opponent.
+  Simulates a single match between the User and an Opponent.
+  Defaults opponent strengths to `@opponent_baseline`.
   Returns `{:win | :draw | :loss, user_goals, opp_goals}`.
   """
-  def simulate_match(user_strengths) do
+  def simulate_match(user_strengths, opp_strengths \\ @opponent_baseline) do
     {user_goals, opp_goals} =
       Enum.reduce(1..10, {0, 0}, fn _possession_index, {u_goals, o_goals} ->
         user_variance = 0.7 + :rand.uniform() * 0.6
         opp_variance = 0.7 + :rand.uniform() * 0.6
 
         user_control = user_strengths.control * user_variance
-        opp_control = @opponent_baseline.control * opp_variance
+        opp_control = opp_strengths.control * opp_variance
 
         if user_control >= opp_control do
           if score_check?(
                user_strengths.attack,
-               @opponent_baseline.defense,
-               @opponent_baseline.gk
+               opp_strengths.defense,
+               opp_strengths.gk
              ) do
             {u_goals + 1, o_goals}
           else
             {u_goals, o_goals}
           end
         else
-          if score_check?(@opponent_baseline.attack, user_strengths.defense, user_strengths.gk) do
+          if score_check?(opp_strengths.attack, user_strengths.defense, user_strengths.gk) do
             {u_goals, o_goals + 1}
           else
             {u_goals, o_goals}
@@ -161,6 +162,22 @@ defmodule Invincibles.Game.SimEngine do
       end
 
     {result, user_goals, opp_goals}
+  end
+
+  defp new_season_accumulator do
+    %{week: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, matches: []}
+  end
+
+  defp accumulate_match(acc, {result, gf, ga}, match_detail) do
+    %{
+      week: match_detail.week,
+      wins: acc.wins + if(result == :win, do: 1, else: 0),
+      draws: acc.draws + if(result == :draw, do: 1, else: 0),
+      losses: acc.losses + if(result == :loss, do: 1, else: 0),
+      gf: acc.gf + gf,
+      ga: acc.ga + ga,
+      matches: acc.matches ++ [match_detail]
+    }
   end
 
   defp score_check?(attack_strength, defense_strength, gk_strength) do
@@ -185,32 +202,20 @@ defmodule Invincibles.Game.SimEngine do
   end
 
   defp simulate_static_season(user_strengths) do
-    Enum.reduce(
-      1..38,
-      %{week: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, matches: []},
-      fn week, acc ->
-        {result, gf, ga} = simulate_match(user_strengths)
+    Enum.reduce(1..38, new_season_accumulator(), fn week, acc ->
+      outcome = {result, gf, ga} = simulate_match(user_strengths)
 
-        match_detail = %{
-          week: week,
-          result: result,
-          gf: gf,
-          ga: ga,
-          opponent: "Static Opponent",
-          opponent_short: "OPP"
-        }
+      match_detail = %{
+        week: week,
+        result: result,
+        gf: gf,
+        ga: ga,
+        opponent: "Static Opponent",
+        opponent_short: "OPP"
+      }
 
-        %{
-          week: week,
-          wins: acc.wins + if(result == :win, do: 1, else: 0),
-          draws: acc.draws + if(result == :draw, do: 1, else: 0),
-          losses: acc.losses + if(result == :loss, do: 1, else: 0),
-          gf: acc.gf + gf,
-          ga: acc.ga + ga,
-          matches: acc.matches ++ [match_detail]
-        }
-      end
-    )
+      accumulate_match(acc, outcome, match_detail)
+    end)
     |> Map.put(:season_label, "Simulation Mode")
   end
 
@@ -227,10 +232,10 @@ defmodule Invincibles.Game.SimEngine do
       our_matches =
         Enum.reduce(
           Enum.with_index(fixtures, 1),
-          %{week: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, matches: []},
+          new_season_accumulator(),
           fn {opponent, index}, acc ->
             opp_strengths = Map.fetch!(opponent_strengths_map, opponent.id)
-            {result, gf, ga} = simulate_match_against_opponent(user_strengths, opp_strengths)
+            outcome = {result, gf, ga} = simulate_match(user_strengths, opp_strengths)
 
             match_detail = %{
               week: index,
@@ -241,15 +246,7 @@ defmodule Invincibles.Game.SimEngine do
               opponent_short: opponent.short_name
             }
 
-            %{
-              week: index,
-              wins: acc.wins + if(result == :win, do: 1, else: 0),
-              draws: acc.draws + if(result == :draw, do: 1, else: 0),
-              losses: acc.losses + if(result == :loss, do: 1, else: 0),
-              gf: acc.gf + gf,
-              ga: acc.ga + ga,
-              matches: acc.matches ++ [match_detail]
-            }
+            accumulate_match(acc, outcome, match_detail)
           end
         )
 
@@ -305,8 +302,8 @@ defmodule Invincibles.Game.SimEngine do
               t1_strengths = Map.fetch!(opponent_strengths_map, club1.id)
               t2_strengths = Map.fetch!(opponent_strengths_map, club2.id)
 
-              {res1, gf1, ga1} = simulate_match_against_opponent(t1_strengths, t2_strengths)
-              {res2, gf2, ga2} = simulate_match_against_opponent(t2_strengths, t1_strengths)
+              {res1, gf1, ga1} = simulate_match(t1_strengths, t2_strengths)
+              {res2, gf2, ga2} = simulate_match(t2_strengths, t1_strengths)
 
               inner_table_acc =
                 update_in(inner_table_acc, [t1], fn stats ->
@@ -433,39 +430,5 @@ defmodule Invincibles.Game.SimEngine do
 
       {club.id, calculate_strengths(lineup)}
     end)
-  end
-
-  defp simulate_match_against_opponent(user_strengths, opp_strengths) do
-    {user_goals, opp_goals} =
-      Enum.reduce(1..10, {0, 0}, fn _possession, {u_goals, o_goals} ->
-        user_variance = 0.7 + :rand.uniform() * 0.6
-        opp_variance = 0.7 + :rand.uniform() * 0.6
-
-        user_control = user_strengths.control * user_variance
-        opp_control = opp_strengths.control * opp_variance
-
-        if user_control >= opp_control do
-          if score_check?(user_strengths.attack, opp_strengths.defense, opp_strengths.gk) do
-            {u_goals + 1, o_goals}
-          else
-            {u_goals, o_goals}
-          end
-        else
-          if score_check?(opp_strengths.attack, user_strengths.defense, user_strengths.gk) do
-            {u_goals, o_goals + 1}
-          else
-            {u_goals, o_goals}
-          end
-        end
-      end)
-
-    result =
-      cond do
-        user_goals > opp_goals -> :win
-        user_goals == opp_goals -> :draw
-        true -> :loss
-      end
-
-    {result, user_goals, opp_goals}
   end
 end

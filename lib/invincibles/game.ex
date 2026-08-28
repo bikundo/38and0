@@ -112,6 +112,26 @@ defmodule Invincibles.Game do
     end
   end
 
+  @slot_to_category %{
+    gk: "GK",
+    lb: "DF",
+    cb1: "DF",
+    cb2: "DF",
+    cb3: "DF",
+    rb: "DF",
+    lm: "MF",
+    cm: "MF",
+    cm1: "MF",
+    cm2: "MF",
+    cm3: "MF",
+    rm: "MF",
+    lw: "FW",
+    st: "FW",
+    st1: "FW",
+    st2: "FW",
+    rw: "FW"
+  }
+
   @doc """
   Automatically fills any empty positions in the lineup with high-quality (OVR >= 80) players.
   Fetches all draftable candidates in a single query, then assigns positions in memory.
@@ -150,14 +170,7 @@ defmodule Invincibles.Game do
       lineup
     else
       needed_categories =
-        Enum.map(empty_slots, fn slot ->
-          cond do
-            slot == :gk -> "GK"
-            slot in [:lb, :cb1, :cb2, :cb3, :rb] -> "DF"
-            slot in [:lm, :cm, :cm1, :cm2, :cm3, :rm] -> "MF"
-            slot in [:lw, :st, :st1, :st2, :rw] -> "FW"
-          end
-        end)
+        Enum.map(empty_slots, &Map.fetch!(@slot_to_category, &1))
         |> Enum.uniq()
 
       all_candidates =
@@ -175,13 +188,7 @@ defmodule Invincibles.Game do
 
       Enum.reduce(empty_slots, {lineup, already_drafted}, fn slot,
                                                              {current_lineup, drafted_ids} ->
-        category =
-          cond do
-            slot == :gk -> "GK"
-            slot in [:lb, :cb1, :cb2, :cb3, :rb] -> "DF"
-            slot in [:lm, :cm, :cm1, :cm2, :cm3, :rm] -> "MF"
-            slot in [:lw, :st, :st1, :st2, :rw] -> "FW"
-          end
+        category = Map.fetch!(@slot_to_category, slot)
 
         preferred_specs = Map.get(slot_preferences, slot, [])
 
@@ -345,6 +352,12 @@ defmodule Invincibles.Game do
       limit: 20
     )
     |> Repo.all()
+    |> Enum.map(fn share ->
+      season_record_atoms =
+        Map.new(share.season_record, fn {k, v} -> {String.to_existing_atom(k), v} end)
+
+      %{share | season_record: season_record_atoms}
+    end)
   end
 
   @doc """

@@ -86,8 +86,8 @@ defmodule InvinciblesWeb do
       import Phoenix.HTML
       # Core UI components
       import InvinciblesWeb.CoreComponents
+      import InvinciblesWeb.Components.PitchBoard, only: [pitch_board: 1]
 
-      # Common modules used in templates
       alias Phoenix.LiveView.JS
       alias InvinciblesWeb.Layouts
 

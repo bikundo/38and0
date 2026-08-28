@@ -43,6 +43,17 @@ defmodule Invincibles.Game.SimEngineTest do
     assert is_integer(ga)
   end
 
+  test "simulate_match/2 accepts custom opponent strengths", %{lineup: lineup} do
+    strengths = SimEngine.calculate_strengths(lineup)
+    opp_strengths = %{attack: 90.0, control: 90.0, defense: 90.0, gk: 90.0}
+
+    {result, gf, ga} = SimEngine.simulate_match(strengths, opp_strengths)
+
+    assert result in [:win, :draw, :loss]
+    assert is_integer(gf)
+    assert is_integer(ga)
+  end
+
   test "simulate_season/1 always plays all 38 games", %{lineup: lineup} do
     strengths = SimEngine.calculate_strengths(lineup)
     record = SimEngine.simulate_season(strengths)
@@ -51,5 +62,13 @@ defmodule Invincibles.Game.SimEngineTest do
     assert length(record.matches) == 38
     assert record.wins + record.draws + record.losses == 38
     assert record.wins >= 0 and record.draws >= 0 and record.losses >= 0
+
+    first_match = hd(record.matches)
+    assert Map.has_key?(first_match, :week)
+    assert Map.has_key?(first_match, :result)
+    assert Map.has_key?(first_match, :gf)
+    assert Map.has_key?(first_match, :ga)
+    assert Map.has_key?(first_match, :opponent)
+    assert Map.has_key?(first_match, :opponent_short)
   end
 end
