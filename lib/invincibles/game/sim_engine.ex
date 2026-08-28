@@ -102,7 +102,6 @@ defmodule Invincibles.Game.SimEngine do
     }
   end
 
-  # Helper to compute average of the sum of stats for a list of appearances
   defp avg_stat_sum([], _keys, default_avg), do: default_avg * 1.0
 
   defp avg_stat_sum(appearances, keys, _default_avg) do
@@ -181,12 +180,10 @@ defmodule Invincibles.Game.SimEngine do
     try do
       simulate_opponents_season(user_strengths)
     rescue
-      # Falls back to static simulation when DB sandbox is not checked out (async tests)
       _e in DBConnection.OwnershipError -> simulate_static_season(user_strengths)
     end
   end
 
-  # Static simulation fallback (e.g. for unit tests that run asynchronously without sandbox checked out)
   defp simulate_static_season(user_strengths) do
     Enum.reduce(
       1..38,
@@ -217,7 +214,6 @@ defmodule Invincibles.Game.SimEngine do
     |> Map.put(:season_label, "Simulation Mode")
   end
 
-  # Realistic simulation playing against 19 dynamic opponents twice from a random season
   defp simulate_opponents_season(user_strengths) do
     season = select_random_season() || "2003-2004"
     clubs = get_clubs_for_season(season)
@@ -225,13 +221,9 @@ defmodule Invincibles.Game.SimEngine do
     if Enum.empty?(clubs) do
       simulate_static_season(user_strengths)
     else
-      # Batch: fetch ALL appearances for the season in ONE query, then partition in Elixir
       opponent_strengths_map = batch_calculate_opponent_strengths(clubs, season)
-
-      # Build 38 fixtures
       fixtures = build_fixtures(clubs)
 
-      # Simulate matches for our team
       our_matches =
         Enum.reduce(
           Enum.with_index(fixtures, 1),
@@ -261,9 +253,6 @@ defmodule Invincibles.Game.SimEngine do
           end
         )
 
-      # Simulate all remaining non-user matches to build a complete league table
-      # 20 teams total (User + 19 Opponents). Each plays 38 games.
-      # Start with a map representing stats of each team.
       initial_table =
         Enum.into(
           clubs,
@@ -280,11 +269,9 @@ defmodule Invincibles.Game.SimEngine do
             }
           },
           fn club ->
-            # Count opponent's stats against us
             matches_against_us =
               Enum.filter(our_matches.matches, &(&1.opponent_short == club.short_name))
 
-            # user loss = opponent win
             w = Enum.count(matches_against_us, &(&1.result == :loss))
             d = Enum.count(matches_against_us, &(&1.result == :draw))
             l = Enum.count(matches_against_us, &(&1.result == :win))
@@ -305,8 +292,6 @@ defmodule Invincibles.Game.SimEngine do
           end
         )
 
-      # Simulate remaining matches between opponents.
-      # Each opponent plays every other opponent twice (home & away), minus the games against the User (which we already computed).
       opponents_list = Map.keys(initial_table) |> List.delete("INV")
 
       league_table_map =
@@ -314,20 +299,15 @@ defmodule Invincibles.Game.SimEngine do
           other_opps = List.delete(opponents_list, t1)
 
           Enum.reduce(other_opps, table_acc, fn t2, inner_table_acc ->
-            # Only simulate if they haven't played their double-header matches yet.
-            # We enforce an arbitrary sorting condition to avoid double simulating.
             if t1 < t2 do
               club1 = Enum.find(clubs, &(&1.short_name == t1))
               club2 = Enum.find(clubs, &(&1.short_name == t2))
               t1_strengths = Map.fetch!(opponent_strengths_map, club1.id)
               t2_strengths = Map.fetch!(opponent_strengths_map, club2.id)
 
-              # Match 1 (t1 home)
               {res1, gf1, ga1} = simulate_match_against_opponent(t1_strengths, t2_strengths)
-              # Match 2 (t2 home)
               {res2, gf2, ga2} = simulate_match_against_opponent(t2_strengths, t1_strengths)
 
-              # Update stats for t1
               inner_table_acc =
                 update_in(inner_table_acc, [t1], fn stats ->
                   w1 = if(res1 == :win, do: 1, else: 0) + if(res2 == :loss, do: 1, else: 0)
@@ -343,7 +323,6 @@ defmodule Invincibles.Game.SimEngine do
                   |> Map.update!(:pts, &(&1 + w1 * 3 + d1))
                 end)
 
-              # Update stats for t2
               update_in(inner_table_acc, [t2], fn stats ->
                 w2 = if(res1 == :loss, do: 1, else: 0) + if(res2 == :win, do: 1, else: 0)
                 d2 = if(res1 == :draw, do: 1, else: 0) + if(res2 == :draw, do: 1, else: 0)
@@ -363,7 +342,6 @@ defmodule Invincibles.Game.SimEngine do
           end)
         end)
 
-      # Sort the table by Pts (desc), then GD (desc), then GF (desc)
       sorted_table =
         Map.values(league_table_map)
         |> Enum.sort(fn a, b ->
@@ -386,9 +364,6 @@ defmodule Invincibles.Game.SimEngine do
     end
   end
 
-  # Select a random season from appearances in the DB.
-  # The distinct season set is inherently small (~30 rows), so fetching all and
-  # picking in Elixir is cheaper than ORDER BY RANDOM() on the full table.
   defp select_random_season do
     seasons =
       from(a in Appearance,
@@ -404,7 +379,6 @@ defmodule Invincibles.Game.SimEngine do
     end
   end
 
-  # Fetch all unique clubs with appearances in a given season
   defp get_clubs_for_season(season) do
     from(c in Club,
       join: a in assoc(c, :appearances),
@@ -415,16 +389,12 @@ defmodule Invincibles.Game.SimEngine do
     |> Repo.all()
   end
 
-  # Generates exactly 38 fixtures from the available clubs list
   defp build_fixtures(clubs) do
     Stream.repeatedly(fn -> Enum.random(clubs) end)
     |> Enum.take(38)
     |> Enum.shuffle()
   end
 
-  # Batch fetches all appearances for a season in ONE query, then computes
-  # strengths for each club in Elixir. Replaces the N+1 pattern of querying
-  # per-club (20 queries → 1 query).
   defp batch_calculate_opponent_strengths(clubs, season) do
     club_ids = Enum.map(clubs, & &1.id)
 
@@ -437,7 +407,6 @@ defmodule Invincibles.Game.SimEngine do
       )
       |> Repo.all()
 
-    # Group by club_id, then calculate strengths per club
     apps_by_club = Enum.group_by(all_apps, & &1.club_id)
 
     Enum.into(clubs, %{}, fn club ->
@@ -466,7 +435,6 @@ defmodule Invincibles.Game.SimEngine do
     end)
   end
 
-  # Simulates match against specific opponent strengths
   defp simulate_match_against_opponent(user_strengths, opp_strengths) do
     {user_goals, opp_goals} =
       Enum.reduce(1..10, {0, 0}, fn _possession, {u_goals, o_goals} ->

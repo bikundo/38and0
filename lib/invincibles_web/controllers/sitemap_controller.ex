@@ -5,7 +5,6 @@ defmodule InvinciblesWeb.SitemapController do
   import Ecto.Query
 
   def index(conn, _params) do
-    # Fetch unique club names and seasons from database appearances
     query =
       from(a in Appearance,
         join: c in assoc(a, :club),

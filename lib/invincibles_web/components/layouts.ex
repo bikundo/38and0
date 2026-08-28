@@ -5,10 +5,6 @@ defmodule InvinciblesWeb.Layouts do
   """
   use InvinciblesWeb, :html
 
-  # Embed all files in layouts/* within this module.
-  # The default root.html.heex file contains the HTML
-  # skeleton of your application, namely HTML headers
-  # and other static content.
   embed_templates "layouts/*"
 
   @doc """
@@ -41,7 +37,6 @@ defmodule InvinciblesWeb.Layouts do
     ~H"""
     <header class="bg-white border-b border-[rgba(0,0,0,0.08)] sticky top-0 z-50 shadow-[0_1px_3px_rgba(0,0,0,0.1),_0_2px_2px_rgba(0,0,0,0.06),_0_0_2px_rgba(0,0,0,0.07)]">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 transition-all duration-200">
-        <!-- Main row with title and badge -->
         <div class="h-16 sm:h-[72px] md:h-[83px] lg:h-[99px] flex items-center justify-between">
           <div class="flex items-center gap-6 md:gap-10">
             <a href="/" class="flex items-center gap-3">
@@ -49,8 +44,7 @@ defmodule InvinciblesWeb.Layouts do
                 INVINCIBLES
               </span>
             </a>
-            
-    <!-- Desktop Navigation -->
+
             <nav class="hidden md:flex items-center gap-6">
               <.link
                 navigate={~p"/"}
@@ -112,8 +106,7 @@ defmodule InvinciblesWeb.Layouts do
             <% end %>
           </div>
         </div>
-        
-    <!-- Mobile Navigation Row (only visible on mobile) -->
+
         <nav class="flex md:hidden items-center justify-around pb-3 border-t border-[rgba(0,0,0,0.04)] pt-2 gap-4">
           <.link
             navigate={~p"/"}

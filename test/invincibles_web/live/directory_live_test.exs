@@ -63,7 +63,6 @@ defmodule InvinciblesWeb.DirectoryLiveTest do
     assert html =~ club.name
     assert html =~ "2007-08 Squad"
     assert html =~ player.display_name
-    # OVR
     assert html =~ "92"
     assert html =~ "PAC"
     assert html =~ "95"
@@ -76,7 +75,6 @@ defmodule InvinciblesWeb.DirectoryLiveTest do
     club: club
   } do
     {:ok, _view, html} = live(conn, ~p"/?club_id=#{club.id}&season=2007-08")
-    # Should skip the spin step and start in drafting step with the preset pool
     assert html =~ "Test Star"
     assert html =~ "Drafting"
   end

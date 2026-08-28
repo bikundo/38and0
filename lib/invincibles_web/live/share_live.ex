@@ -60,21 +60,16 @@ defmodule InvinciblesWeb.ShareLive do
     ~H"""
     <Layouts.app flash={@flash} record={@season_record} active_tab={:share} step={nil}>
       <div class="min-h-screen bg-[#f2f0eb] text-[rgba(0,0,0,0.87)] font-sans flex flex-col pb-12">
-        <!-- Main container -->
         <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start w-full">
-          <!-- Left 8 columns: Game Board & Lineup Pitch -->
           <div class="order-2 lg:order-1 lg:col-span-8 flex flex-col gap-6">
             <div class="bg-[#f2f0eb] flex flex-col gap-4">
-              <!-- Soccer Pitch Lineup View -->
               <div class="relative bg-[#006241] border-4 border-[#1E3932] rounded-3xl p-6 overflow-hidden min-h-[660px] flex flex-col justify-between shadow-lg select-none">
-                <!-- Soccer Pitch Lines -->
                 <div class="absolute inset-4 border border-white/20 rounded-2xl pointer-events-none">
                 </div>
                 <div class="absolute inset-x-4 top-1/2 h-px bg-white/20 -translate-y-1/2 pointer-events-none">
                 </div>
                 <div class="absolute top-1/2 left-1/2 w-36 h-36 border border-white/20 rounded-full -translate-x-1/2 -translate-y-1/2 pointer-events-none">
                 </div>
-                <!-- Goal Areas / Penalty Boxes -->
                 <div class="absolute top-4 left-1/2 -translate-x-1/2 w-80 h-32 border-b border-x border-white/10 pointer-events-none">
                 </div>
                 <div class="absolute bottom-4 left-1/2 -translate-x-1/2 w-80 h-32 border-t border-x border-white/10 pointer-events-none">
@@ -82,8 +77,7 @@ defmodule InvinciblesWeb.ShareLive do
 
                 <% layout = Map.fetch!(@formation_layouts, @formation) %>
                 <% slot_labels = InvinciblesWeb.GameLive.slot_labels(layout) %>
-                
-    <!-- Attacking Line -->
+
                 <div class="flex justify-around items-center gap-2 z-10 mt-2">
                   <%= for pos <- layout.fwd do %>
                     <div class="pitch-slot flex flex-col items-center justify-center transition-all duration-200">
@@ -102,8 +96,7 @@ defmodule InvinciblesWeb.ShareLive do
                     </div>
                   <% end %>
                 </div>
-                
-    <!-- Attacking Midfield Line (optional, e.g. 4-2-3-1) -->
+
                 <%= if layout.amf != [] do %>
                   <div class="flex justify-around items-center gap-2 z-10 my-3">
                     <%= for pos <- layout.amf do %>
@@ -124,8 +117,7 @@ defmodule InvinciblesWeb.ShareLive do
                     <% end %>
                   </div>
                 <% end %>
-                
-    <!-- Midfield Line -->
+
                 <div class="flex justify-around items-center gap-2 z-10 my-4">
                   <%= for pos <- layout.mid do %>
                     <div class="pitch-slot flex flex-col items-center justify-center transition-all duration-200">
@@ -144,8 +136,7 @@ defmodule InvinciblesWeb.ShareLive do
                     </div>
                   <% end %>
                 </div>
-                
-    <!-- Defensive Line -->
+
                 <div class="flex justify-around items-center gap-2 z-10">
                   <%= for pos <- layout.def do %>
                     <div class="pitch-slot flex flex-col items-center justify-center transition-all duration-200">
@@ -164,8 +155,7 @@ defmodule InvinciblesWeb.ShareLive do
                     </div>
                   <% end %>
                 </div>
-                
-    <!-- Goalkeeper (GK) -->
+
                 <div class="flex justify-center items-center z-10 mb-2">
                   <div class="pitch-slot flex flex-col items-center justify-center transition-all duration-200">
                     <%= if card = @lineup[:gk] do %>
@@ -183,8 +173,7 @@ defmodule InvinciblesWeb.ShareLive do
                   </div>
                 </div>
               </div>
-              
-    <!-- Standings table -->
+
               <% pts = @season_record.wins * 3 + @season_record.draws
               gd = @season_record.gf - @season_record.ga
               gd_str = if gd >= 0, do: "+#{gd}", else: "#{gd}"
@@ -294,8 +283,7 @@ defmodule InvinciblesWeb.ShareLive do
               </div>
             </div>
           </div>
-          
-    <!-- Right 4 columns: Play Call-To-Action -->
+
           <div class="order-1 lg:order-2 lg:col-span-4 flex flex-col gap-6">
             <div class="card-starbucks p-6 flex flex-col gap-6 text-center">
               <div class="w-12 h-12 mx-auto bg-[#edebe9] border border-[rgba(0,0,0,0.08)] rounded-[12px] flex items-center justify-center">

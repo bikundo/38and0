@@ -25,9 +25,4 @@ defmodule InvinciblesWeb.Router do
     live "/squads/:club_slug", DirectoryLive
     live "/squads/:club_slug/:season_slug", DirectoryLive
   end
-
-  # Other scopes may use custom stacks.
-  # scope "/api", InvinciblesWeb do
-  #   pipe_through :api
-  # end
 end

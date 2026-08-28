@@ -16,7 +16,6 @@ defmodule InvinciblesWeb.Components.PlayerCard do
   attr :simple, :boolean, default: false
 
   def player_card(assigns) do
-    # Calculate OVR and theme colors
     ovr = assigns.appearance.ovr
     player = assigns.appearance.player
     club = assigns.appearance.club
@@ -40,9 +39,7 @@ defmodule InvinciblesWeb.Components.PlayerCard do
       ]}
     >
       <%= if @simple do %>
-        <!-- Simplified Card Content (for pitch) -->
         <div class="flex flex-col justify-between h-full w-full">
-          <!-- Top: OVR and Position -->
           <div class="flex justify-between items-start">
             <div class="flex flex-col items-start">
               <span class={[
@@ -55,15 +52,13 @@ defmodule InvinciblesWeb.Components.PlayerCard do
                 {@player.primary_position}
               </span>
             </div>
-            <!-- Club Dot Indicator -->
             <div
               class="w-3.5 h-3.5 rounded-full border border-black/10 shadow-sm"
               style={"background-color: #{@club.primary_color};"}
             >
             </div>
           </div>
-          
-    <!-- Bottom: Last Name -->
+
           <div class="text-center mt-auto pb-1 px-1">
             <div class="text-sm font-bold truncate max-w-full leading-normal py-0.5 font-script-starbucks text-slate-800">
               {formatted_name(@player.display_name)}
@@ -74,8 +69,6 @@ defmodule InvinciblesWeb.Components.PlayerCard do
           </div>
         </div>
       <% else %>
-        <!-- Full Card Content -->
-        <!-- Top Section: OVR and Position -->
         <div class="flex justify-between items-start">
           <div class="flex flex-col items-center">
             <span class={[
@@ -90,7 +83,6 @@ defmodule InvinciblesWeb.Components.PlayerCard do
           </div>
 
           <div class="flex flex-col items-end text-right">
-            <!-- Club primary color dot indicator and Short Name -->
             <div class="flex items-center gap-1.5 bg-black/5 px-1.5 py-0.5 rounded text-[10px] font-bold">
               <span class="w-2 h-2 rounded-full" style={"background-color: #{@club.primary_color};"}>
               </span>
@@ -101,8 +93,7 @@ defmodule InvinciblesWeb.Components.PlayerCard do
             </span>
           </div>
         </div>
-        
-    <!-- Middle Section: Player Name and Season -->
+
         <div class="text-center my-2">
           <div class="text-[10px] font-semibold tracking-wider opacity-75">
             {String.upcase(@appearance.season)}
@@ -111,12 +102,10 @@ defmodule InvinciblesWeb.Components.PlayerCard do
             {formatted_name(@player.display_name)}
           </div>
         </div>
-        
-    <!-- Bottom Section: 3x2 Attribute Grid -->
+
         <div class="bg-black/5 rounded-lg p-2.5">
           <div class="grid grid-cols-3 gap-x-2 gap-y-1.5 text-center text-[10px]">
             <%= if @player.primary_position == "GK" do %>
-              <!-- GK Stats -->
               <div>
                 <div class="font-bold text-sm">{stat_value(@appearance.stats, "div")}</div>
                 <div class="text-[8px] font-semibold text-[rgba(0,0,0,0.58)]">DIV</div>
@@ -142,7 +131,6 @@ defmodule InvinciblesWeb.Components.PlayerCard do
                 <div class="text-[8px] font-semibold text-[rgba(0,0,0,0.58)]">POS</div>
               </div>
             <% else %>
-              <!-- Outfield Stats -->
               <div>
                 <div class="font-bold text-sm">{stat_value(@appearance.stats, "pac")}</div>
                 <div class="text-[8px] font-semibold text-[rgba(0,0,0,0.58)]">PAC</div>
@@ -170,8 +158,7 @@ defmodule InvinciblesWeb.Components.PlayerCard do
             <% end %>
           </div>
         </div>
-        
-    <!-- Cost / Badge overlay if present -->
+
         <%= if @cost do %>
           <div class="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#00754A] text-white border border-[#006241] text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md z-10 whitespace-nowrap">
             £{format_cost(@cost)}
@@ -216,7 +203,6 @@ defmodule InvinciblesWeb.Components.PlayerCard do
     end
   end
 
-  # Helper to retrieve "FirstInitial. LastName" from display name
   defp formatted_name(display_name) do
     case String.split(display_name, " ") do
       [single] ->
@@ -228,12 +214,10 @@ defmodule InvinciblesWeb.Components.PlayerCard do
     end
   end
 
-  # Helper to safely display stat values
   defp stat_value(stats, key) do
     Map.get(stats, key) || Map.get(stats, String.to_atom(key)) || 50
   end
 
-  # Format cost to human readable format (e.g. 50M or 7.5M)
   defp format_cost(cost) do
     cond do
       cost >= 1_000_000 ->

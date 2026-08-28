@@ -3,7 +3,6 @@ defmodule Invincibles.GameShareTest do
   alias Invincibles.Game
   import Ecto.Query
 
-  # Create helper mock player and club to draft
   setup do
     club =
       Repo.insert!(%Invincibles.Game.Club{
@@ -47,8 +46,6 @@ defmodule Invincibles.GameShareTest do
   end
 
   test "get_share/1 retrieves backdated shares without expiring them" do
-    # Insert share with manually backdated inserted_at
-    # > 48 hours
     backdated = NaiveDateTime.utc_now() |> NaiveDateTime.add(-172_900, :second)
 
     {:ok, share} =
@@ -62,7 +59,6 @@ defmodule Invincibles.GameShareTest do
       })
       |> Repo.insert()
 
-    # Overwrite inserted_at
     {1, _} =
       Repo.update_all(from(s in Invincibles.Game.Share, where: s.id == ^share.id),
         set: [inserted_at: backdated]

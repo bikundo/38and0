@@ -4,7 +4,6 @@ defmodule InvinciblesWeb.ShareLiveTest do
   alias Invincibles.Repo
   alias Invincibles.Game
 
-  # Setup database record
   setup do
     club =
       Repo.insert!(%Invincibles.Game.Club{
@@ -49,7 +48,6 @@ defmodule InvinciblesWeb.ShareLiveTest do
   test "ShareLive redirects to homepage on invalid or missing share ID", %{conn: conn} do
     random_uuid = Ecto.UUID.generate()
 
-    # Assert redirect occurs to "/"
     assert {:error, {:redirect, %{to: "/"}}} = live(conn, ~p"/share/#{random_uuid}")
   end
 end

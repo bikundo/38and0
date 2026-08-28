@@ -379,10 +379,8 @@ defmodule InvinciblesWeb.GameLive do
         {:noreply, put_flash(socket, :error, "Position slot already occupied!")}
 
       true ->
-        # Update lineup
         new_lineup = Map.put(socket.assigns.lineup, pos_key, appearance)
 
-        # Check if squad is complete (all active slots filled)
         layout = Map.fetch!(@formation_layouts, socket.assigns.formation)
         active_slots = [:gk | layout.def ++ layout.amf ++ layout.mid ++ layout.fwd]
 
@@ -439,18 +437,15 @@ defmodule InvinciblesWeb.GameLive do
 
   @impl true
   def handle_event("simulate_season", _params, socket) do
-    # Calculate squad aggregates and run the simulator
     strengths = SimEngine.calculate_strengths(socket.assigns.lineup)
     results = SimEngine.simulate_season(strengths)
 
-    # Start the animated simulation view
     socket =
       socket
       |> assign(:step, :simulating)
       |> assign(:sim_results, results)
       |> assign(:simulating_week, 1)
 
-    # Trigger first week simulation step
     Process.send_after(self(), :tick_simulation, 150)
 
     {:noreply, socket}
@@ -462,7 +457,6 @@ defmodule InvinciblesWeb.GameLive do
     results = socket.assigns.sim_results
 
     if current_week <= 38 do
-      # Calculate partial record up to current week
       matches_so_far = Enum.take(results.matches, current_week)
 
       wins = Enum.count(matches_so_far, &(&1.result == :win))
@@ -488,7 +482,6 @@ defmodule InvinciblesWeb.GameLive do
       Process.send_after(self(), :tick_simulation, 150)
       {:noreply, socket}
     else
-      # Full season complete — determine outcome
       final_step =
         cond do
           results.wins == 38 -> :hall_of_fame
@@ -496,7 +489,6 @@ defmodule InvinciblesWeb.GameLive do
           true -> :game_over
         end
 
-      # Automatically save the game as a Share record on completion
       lineup = socket.assigns.lineup
       formation = socket.assigns.formation
       record = socket.assigns.season_record
@@ -520,14 +512,12 @@ defmodule InvinciblesWeb.GameLive do
     end
   end
 
-  # Helper to get the list of empty compatible slots for a player's primary position within the active formation slots
   defp compatible_empty_slots(lineup, primary_position, active_slots) do
     slots = Map.get(@positions_mapping, primary_position, [])
     active_matching_slots = Enum.filter(slots, &Enum.member?(active_slots, &1))
     Enum.filter(active_matching_slots, &is_nil(Map.get(lineup, &1)))
   end
 
-  # Helper to check if a player is already drafted in the lineup
   defp player_already_drafted?(lineup, player_id) do
     Enum.any?(lineup, fn {_, app} ->
       not is_nil(app) and app.player_id == player_id
@@ -593,7 +583,6 @@ defmodule InvinciblesWeb.GameLive do
     ~H"""
     <Layouts.app flash={@flash} record={@season_record} active_tab={@active_tab} step={@step}>
       <div class="min-h-screen bg-[#f2f0eb] text-[rgba(0,0,0,0.87)] font-sans flex flex-col pb-12">
-        <!-- Main container -->
         <%= if @active_tab == :leaderboard do %>
           <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 flex-1 w-full flex flex-col gap-6">
             <div class="card-starbucks p-6 md:p-8 flex flex-col gap-6">
@@ -782,23 +771,18 @@ defmodule InvinciblesWeb.GameLive do
             phx-hook="DragDropLineup"
             class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start w-full"
           >
-            <!-- Left 8 columns: Game Board & Lineup Pitch -->
             <div class="order-2 lg:order-1 lg:col-span-8 flex flex-col gap-6">
-              <!-- Share Capture Area enclosing Pitch + Record Details below it -->
               <div id="share-capture-area" class="bg-[#f2f0eb] flex flex-col gap-4">
-                <!-- Soccer Pitch Lineup View -->
                 <div
                   id="game-pitch-container"
                   class="relative bg-[#006241] border-4 border-[#1E3932] rounded-3xl p-6 overflow-hidden min-h-[660px] flex flex-col justify-between shadow-lg select-none"
                 >
-                  <!-- Soccer Pitch Lines -->
                   <div class="absolute inset-4 border border-white/20 rounded-2xl pointer-events-none">
                   </div>
                   <div class="absolute inset-x-4 top-1/2 h-px bg-white/20 -translate-y-1/2 pointer-events-none">
                   </div>
                   <div class="absolute top-1/2 left-1/2 w-36 h-36 border border-white/20 rounded-full -translate-x-1/2 -translate-y-1/2 pointer-events-none">
                   </div>
-                  <!-- Goal Areas / Penalty Boxes -->
                   <div class="absolute top-4 left-1/2 -translate-x-1/2 w-80 h-32 border-b border-x border-white/10 pointer-events-none">
                   </div>
                   <div class="absolute bottom-4 left-1/2 -translate-x-1/2 w-80 h-32 border-t border-x border-white/10 pointer-events-none">
@@ -806,8 +790,7 @@ defmodule InvinciblesWeb.GameLive do
 
                   <% layout = Map.fetch!(@formation_layouts, @formation) %>
                   <% slot_labels = InvinciblesWeb.GameLive.slot_labels(layout) %>
-                  
-    <!-- Attacking Line -->
+
                   <div class="flex justify-around items-center gap-2 z-10 mt-2">
                     <%= for pos <- layout.fwd do %>
                       <div
@@ -815,7 +798,6 @@ defmodule InvinciblesWeb.GameLive do
                         class="pitch-slot flex flex-col items-center justify-center transition-all duration-200"
                       >
                         <%= if card = @lineup[pos] do %>
-                          <!-- Occupied Circle -->
                           <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#f43f5e] border-2 border-white/20 flex items-center justify-center text-white font-extrabold text-sm sm:text-base shadow-lg cursor-grab active:cursor-grabbing hover:scale-105 transition-all">
                             {elem(slot_labels[pos], 0)}
                           </div>
@@ -823,7 +805,6 @@ defmodule InvinciblesWeb.GameLive do
                             {truncate_name(card.player.display_name)}
                           </div>
                         <% else %>
-                          <!-- Empty Circle -->
                           <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/80 font-extrabold text-sm sm:text-base">
                             {elem(slot_labels[pos], 0)}
                           </div>
@@ -831,8 +812,7 @@ defmodule InvinciblesWeb.GameLive do
                       </div>
                     <% end %>
                   </div>
-                  
-    <!-- Attacking Midfield Line (optional, e.g. 4-2-3-1) -->
+
                   <%= if layout.amf != [] do %>
                     <div class="flex justify-around items-center gap-2 z-10 my-3">
                       <%= for pos <- layout.amf do %>
@@ -841,7 +821,6 @@ defmodule InvinciblesWeb.GameLive do
                           class="pitch-slot flex flex-col items-center justify-center transition-all duration-200"
                         >
                           <%= if card = @lineup[pos] do %>
-                            <!-- Occupied Circle -->
                             <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#f43f5e] border-2 border-white/20 flex items-center justify-center text-white font-extrabold text-sm sm:text-base shadow-lg cursor-grab active:cursor-grabbing hover:scale-105 transition-all">
                               {elem(slot_labels[pos], 0)}
                             </div>
@@ -849,7 +828,6 @@ defmodule InvinciblesWeb.GameLive do
                               {truncate_name(card.player.display_name)}
                             </div>
                           <% else %>
-                            <!-- Empty Circle -->
                             <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/80 font-extrabold text-sm sm:text-base">
                               {elem(slot_labels[pos], 0)}
                             </div>
@@ -858,8 +836,7 @@ defmodule InvinciblesWeb.GameLive do
                       <% end %>
                     </div>
                   <% end %>
-                  
-    <!-- Midfield Line -->
+
                   <div class="flex justify-around items-center gap-2 z-10 my-4">
                     <%= for pos <- layout.mid do %>
                       <div
@@ -867,7 +844,6 @@ defmodule InvinciblesWeb.GameLive do
                         class="pitch-slot flex flex-col items-center justify-center transition-all duration-200"
                       >
                         <%= if card = @lineup[pos] do %>
-                          <!-- Occupied Circle -->
                           <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#f43f5e] border-2 border-white/20 flex items-center justify-center text-white font-extrabold text-sm sm:text-base shadow-lg cursor-grab active:cursor-grabbing hover:scale-105 transition-all">
                             {elem(slot_labels[pos], 0)}
                           </div>
@@ -875,7 +851,6 @@ defmodule InvinciblesWeb.GameLive do
                             {truncate_name(card.player.display_name)}
                           </div>
                         <% else %>
-                          <!-- Empty Circle -->
                           <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/80 font-extrabold text-sm sm:text-base">
                             {elem(slot_labels[pos], 0)}
                           </div>
@@ -883,8 +858,7 @@ defmodule InvinciblesWeb.GameLive do
                       </div>
                     <% end %>
                   </div>
-                  
-    <!-- Defensive Line -->
+
                   <div class="flex justify-around items-center gap-2 z-10">
                     <%= for pos <- layout.def do %>
                       <div
@@ -892,7 +866,6 @@ defmodule InvinciblesWeb.GameLive do
                         class="pitch-slot flex flex-col items-center justify-center transition-all duration-200"
                       >
                         <%= if card = @lineup[pos] do %>
-                          <!-- Occupied Circle -->
                           <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#f43f5e] border-2 border-white/20 flex items-center justify-center text-white font-extrabold text-sm sm:text-base shadow-lg cursor-grab active:cursor-grabbing hover:scale-105 transition-all">
                             {elem(slot_labels[pos], 0)}
                           </div>
@@ -900,7 +873,6 @@ defmodule InvinciblesWeb.GameLive do
                             {truncate_name(card.player.display_name)}
                           </div>
                         <% else %>
-                          <!-- Empty Circle -->
                           <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/80 font-extrabold text-sm sm:text-base">
                             {elem(slot_labels[pos], 0)}
                           </div>
@@ -908,15 +880,13 @@ defmodule InvinciblesWeb.GameLive do
                       </div>
                     <% end %>
                   </div>
-                  
-    <!-- Goalkeeper (GK) -->
+
                   <div class="flex justify-center items-center z-10 mb-2">
                     <div
                       data-position-key="gk"
                       class="pitch-slot flex flex-col items-center justify-center transition-all duration-200"
                     >
                       <%= if card = @lineup[:gk] do %>
-                        <!-- Occupied Circle -->
                         <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#f43f5e] border-2 border-white/20 flex items-center justify-center text-white font-extrabold text-sm sm:text-base shadow-lg cursor-grab active:cursor-grabbing hover:scale-105 transition-all">
                           {elem(slot_labels[:gk], 0)}
                         </div>
@@ -924,7 +894,6 @@ defmodule InvinciblesWeb.GameLive do
                           {truncate_name(card.player.display_name)}
                         </div>
                       <% else %>
-                        <!-- Empty Circle -->
                         <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-white/40 bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/80 font-extrabold text-sm sm:text-base">
                           {elem(slot_labels[:gk], 0)}
                         </div>
@@ -933,7 +902,6 @@ defmodule InvinciblesWeb.GameLive do
                   </div>
                 </div>
               </div>
-              <!-- End share-capture-area -->
 
               <%!-- Mobile Match History --%>
               <%= if @step in [:game_over, :hall_of_fame] and @sim_results && @sim_results.matches != [] do %>
@@ -976,12 +944,8 @@ defmodule InvinciblesWeb.GameLive do
                 </div>
               <% end %>
             </div>
-            <!-- End lg:col-span-8 -->
-          
-          <!-- Right 4 columns: Game Controllers / Draft pool -->
+
             <div class="order-1 lg:order-2 lg:col-span-4 flex flex-col gap-6">
-              
-    <!-- Game State Controller card -->
               <%= if @step not in [:game_over, :hall_of_fame] do %>
                 <div class="card-starbucks p-6 flex flex-col gap-6">
                   <%= if @step == :not_started do %>
@@ -1569,8 +1533,7 @@ defmodule InvinciblesWeb.GameLive do
               <% end %>
             </div>
           </main>
-          
-    <!-- Frap Floating CTA Button -->
+
           <%= if @step == :squad_complete do %>
             <button
               phx-click="simulate_season"

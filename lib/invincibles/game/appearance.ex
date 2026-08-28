@@ -34,9 +34,6 @@ defmodule Invincibles.Game.Appearance do
         add_error(changeset, :stats, "must be a map")
 
       true ->
-        # We will check keys based on position. Since loading player may not happen inside the changeset,
-        # we can validate general stats presence of either goalkeeper stats (div, han, kic, ref, spd, pos)
-        # or outfield stats (pac, sho, pas, dri, def, phy).
         keys = Map.keys(stats) |> Enum.map(&to_string/1)
 
         gk_keys = ["div", "han", "kic", "ref", "spd", "pos"]
@@ -46,7 +43,6 @@ defmodule Invincibles.Game.Appearance do
         has_outfield = Enum.all?(outfield_keys, &Enum.member?(keys, &1))
 
         if has_gk or has_outfield do
-          # Check all values are integers between 1 and 99
           invalid_stat =
             Enum.find(stats, fn {_, val} ->
               not is_integer(val) or val < 1 or val > 99

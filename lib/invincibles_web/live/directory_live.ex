@@ -30,7 +30,6 @@ defmodule InvinciblesWeb.DirectoryLive do
            )
            |> redirect(to: ~p"/squads/#{club_slug}")}
         else
-          # Calculate FAQ Schema details
           highest_rated = Enum.max_by(appearances, & &1.ovr)
           highest_rated_player = highest_rated.player.display_name
           highest_rated_ovr = highest_rated.ovr
@@ -175,7 +174,6 @@ defmodule InvinciblesWeb.DirectoryLive do
     ~H"""
     <Layouts.app flash={@flash} active_tab={:directory}>
       <div class="min-h-screen bg-[#f2f0eb] text-[rgba(0,0,0,0.87)] font-sans flex flex-col pb-16">
-        <!-- Schema JSON-LD Injection -->
         <script type="application/ld+json">
           <%= {:safe, @schema_json} %>
         </script>
@@ -183,7 +181,6 @@ defmodule InvinciblesWeb.DirectoryLive do
         <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 w-full flex-1 flex flex-col gap-8">
           <%= cond do %>
             <% @live_action == :index -> %>
-              <!-- INDEX VIEW: List of Clubs -->
               <div class="card-starbucks p-6 md:p-8 flex flex-col gap-6">
                 <div>
                   <h1 class="text-3xl font-black tracking-tight text-[#006241]">
@@ -219,7 +216,6 @@ defmodule InvinciblesWeb.DirectoryLive do
                 </div>
               </div>
             <% @live_action == :club -> %>
-              <!-- CLUB VIEW: List of Seasons for a Club -->
               <div class="flex flex-col gap-6">
                 <div class="flex items-center gap-3">
                   <.link
@@ -269,7 +265,6 @@ defmodule InvinciblesWeb.DirectoryLive do
                 </div>
               </div>
             <% @live_action == :squad -> %>
-              <!-- SQUAD VIEW: Squad Sheet & Details -->
               <div class="flex flex-col gap-6">
                 <div class="flex items-center gap-3">
                   <.link
@@ -282,8 +277,7 @@ defmodule InvinciblesWeb.DirectoryLive do
                     Back to {@club.name} seasons
                   </span>
                 </div>
-                
-    <!-- Play/Draft CTA Banner -->
+
                 <div class="bg-gradient-to-r from-[#006241] to-[#00754A] text-white rounded-2xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-lg">
                   <div class="flex flex-col gap-1.5 max-w-xl">
                     <span class="text-[10px] font-bold uppercase tracking-[1.5px] text-white/75">
@@ -303,8 +297,7 @@ defmodule InvinciblesWeb.DirectoryLive do
                     Draft With This Team
                   </.link>
                 </div>
-                
-    <!-- Squad Breakdown -->
+
                 <div class="card-starbucks p-6 md:p-8 flex flex-col gap-8">
                   <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[rgba(0,0,0,0.08)] pb-6 gap-4">
                     <div class="flex items-center gap-4">
@@ -346,8 +339,7 @@ defmodule InvinciblesWeb.DirectoryLive do
                       </div>
                     </div>
                   </div>
-                  
-    <!-- Group appearances by position category -->
+
                   <% grouped_appearances = Enum.group_by(@appearances, & &1.player.primary_position) %>
 
                   <%= for {pos_label, pos_key} <- [
@@ -379,11 +371,9 @@ defmodule InvinciblesWeb.DirectoryLive do
                                   {app.ovr}
                                 </span>
                               </div>
-                              
-    <!-- Player stats grid -->
+
                               <div class="grid grid-cols-3 gap-x-2 gap-y-1.5 bg-white border border-[rgba(0,0,0,0.04)] rounded-xl p-2.5 text-center">
                                 <%= if app.player.primary_position == "GK" do %>
-                                  <!-- GK stats -->
                                   <%= for {stat_label, stat_key} <- [
                                         {"DIV", "div"},
                                         {"HAN", "han"},
@@ -403,7 +393,6 @@ defmodule InvinciblesWeb.DirectoryLive do
                                     </div>
                                   <% end %>
                                 <% else %>
-                                  <!-- Outfield stats -->
                                   <%= for {stat_label, stat_key} <- [
                                         {"PAC", "pac"},
                                         {"SHO", "sho"},
@@ -439,7 +428,6 @@ defmodule InvinciblesWeb.DirectoryLive do
     """
   end
 
-  # Helper to query using a case-insensitive slug comparison
   defp get_club_by_slug(slug) do
     query =
       from(c in Game.Club, where: fragment("LOWER(REPLACE(?, ' ', '-')) = ?", c.name, ^slug))

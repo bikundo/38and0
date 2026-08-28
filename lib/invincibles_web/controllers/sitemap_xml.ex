@@ -20,7 +20,6 @@ defmodule InvinciblesWeb.SitemapXML do
       </url>
     """
 
-    # Deduplicate club-level URLs
     unique_clubs =
       squads
       |> Enum.map(fn {club_name, _} -> slugify(club_name) end)
@@ -54,7 +53,6 @@ defmodule InvinciblesWeb.SitemapXML do
 
     urlset_end = "</urlset>\n"
 
-    # Return the concatenated XML string
     Enum.join([xml_header, urlset_start, root_urls, club_urls, squad_urls, urlset_end])
   end
 
